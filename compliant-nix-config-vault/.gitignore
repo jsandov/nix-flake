@@ -1,0 +1,107 @@
+# ===== Ephemeral output =====
+output/
+
+# ===== Secrets and credentials =====
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.cer
+!*.crt.example
+*.age
+*.age.key
+age-key.*
+sops-key.*
+secrets.yaml
+secrets.json
+secrets.env
+*.secret
+*.secrets
+
+# SSH keys
+id_rsa
+id_ed25519
+id_ecdsa
+*.pub
+!*.pub.example
+known_hosts
+authorized_keys
+
+# TOTP / MFA
+.google_authenticator
+
+# ===== Environment and config files with secrets =====
+.env
+.env.*
+!.env.example
+*.local.conf
+*.local.yaml
+*.local.json
+*.local.toml
+
+# ===== API keys and tokens =====
+*token*
+!*token*.md
+*apikey*
+*api_key*
+*api-key*
+
+# ===== OS and editor =====
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+\#*\#
+.vscode/
+.idea/
+
+# ===== Obsidian =====
+# Keep core settings, ignore workspace state and plugin caches
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/plugins/*/data.json
+.obsidian/cache
+.trash/
+
+# ===== NixOS artifacts =====
+result
+result-*
+*.qcow2
+*.iso
+*.img
+
+# ===== Backup and temp files =====
+*.bak
+*.tmp
+*.temp
+*.orig
+*.log
+*.pid
+*.lock
+!flake.lock
+
+# ===== Compiled / binary =====
+*.o
+*.so
+*.dylib
+*.exe
+*.bin
+*.dat
+
+# ===== Archives (don't accidentally commit large dumps) =====
+*.tar
+*.tar.gz
+*.tgz
+*.tar.bz2
+*.zip
+*.7z
+*.rar
+
+# ===== Core dumps =====
+core
+core.*
+vgcore.*

@@ -1,5 +1,7 @@
 # Knowledge Base Index
 
+See [[_graph]] for a visual map of how all topics connect.
+
 ## Topics
 
 - [[architecture/]] — System architecture: 6 flake modules, data flows, threat model

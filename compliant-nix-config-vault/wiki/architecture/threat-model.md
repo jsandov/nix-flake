@@ -55,5 +55,5 @@ Implement every technical control possible at host and service layer, document w
 
 - This is a **single-tenant, single-operator** system on dedicated hardware — not multi-user or clustered
 - LAN-only posture limits the attacker pool but doesn't eliminate risk
-- The biggest residual risk is [[hipaa/live-memory-ephi-risk|live memory ePHI exposure]] during inference
-- ~60% of [[ai-security/owasp-llm-top-10|OWASP controls]] require application code, not just infrastructure
+- The biggest residual risk is [[../hipaa/live-memory-ephi-risk|live memory ePHI exposure]] during inference
+- ~60% of [[../ai-security/owasp-llm-top-10|OWASP controls]] require application code, not just infrastructure

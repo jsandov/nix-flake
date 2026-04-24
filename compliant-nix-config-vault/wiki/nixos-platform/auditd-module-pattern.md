@@ -61,7 +61,7 @@ Net: user-driven deletions only. Without these filters, the log floods with syst
 
 ## When to Extract Rules to `canonical`
 
-This project keeps rules inline in `modules/audit-and-aide/default.nix` rather than pulling from `canonical.auditRules`. The rationale (which applies generally):
+This project keeps rules inline in `modules/audit-and-aide/auditd.nix` rather than pulling from `canonical.auditRules`. (The `audit-and-aide` aggregator `default.nix` now imports `./auditd.nix` + `./evidence.nix`; see [[../shared-controls/evidence-generation]] for the split.) The rationale (which applies generally):
 
 - Rules are STIG-derived with only minor cross-framework deltas.
 - Rules are specific to one module — no other module would consume them.

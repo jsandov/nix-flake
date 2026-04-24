@@ -54,7 +54,7 @@ Critical: 30d, High: 90d, Medium: 180d, Low: next update
 
 Monitor: `/etc`, `/boot`, `/run/current-system`, `/etc/static`, `/etc/shadow`, `/etc/ssh`, `/var/log/audit`, `/etc/pam.d`, `/etc/nftables.conf`
 
-**Do NOT monitor** `/usr/bin`, `/usr/sbin` — empty on NixOS. See [[nixos-platform/nixos-gotchas]].
+**Do NOT monitor** `/usr/bin`, `/usr/sbin` — empty on NixOS. See [[../nixos-platform/nixos-gotchas]].
 
 ## Centralized Log Forwarding (Req 10.3.3)
 
@@ -69,4 +69,4 @@ Must track: Nginx TLS cert/key, SSH host key, syslog CA cert, sops-nix age key. 
 - PCI DSS v4.0 has significant new requirements effective March 2025 — most are already covered
 - The NixOS immutability argument for anti-malware is strong but needs formal risk analysis documentation
 - Network vulnerability scanning is a gap — vulnix/Lynis are not sufficient alone
-- [[compliance-frameworks/canonical-config-values]] resolves all PCI vs other framework conflicts
+- [[../compliance-frameworks/canonical-config-values]] resolves all PCI vs other framework conflicts

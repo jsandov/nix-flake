@@ -32,7 +32,7 @@ The `adversaries` / `outOfScope` enums vs `crownJewels` str list is a deliberate
 - `scheme` — single-value enum `four-tier-public-internal-sensitive-restricted`. Intent-declaration pattern (see below).
 - `tiers` — ordered `listOf submodule` with `name`, `level`, `examples`, `handling`. Four tiers: Public / Internal / Sensitive / Restricted.
 
-The `handling` field is prose — consumed by [[../shared-controls/canonical-config|evidence generation]] (ARCH-10, future) to emit per-tier handling requirements as audit evidence without duplicating.
+The `handling` field is prose — consumed by [[../shared-controls/evidence-generation|evidence generation]] (ARCH-10) to emit per-tier handling requirements as audit evidence without duplicating.
 
 ### `tenancy`
 
@@ -45,16 +45,16 @@ Most consequential option in meta — changing to multi-tenant invalidates the s
 
 Same pattern as canonical and secrets: this module **declares** options; downstream modules **consume** them. An `agent-sandbox` module gating on `config.system.compliance.dataClassification.tiers` can refuse to handle Restricted data without encryption — that enforcement is the agent-sandbox module's job, not meta's.
 
-## Expected Consumers
+## Consumers
 
-| Module (future) | Reads | Uses for |
-|---|---|---|
-| `agent-sandbox` (AI-08) | `dataClassification.tiers`, `tenancy.mode` | Gate Restricted data; per-tenant UIDs in multi-tenant mode |
-| `ai-services` (AI-09) | `dataClassification.tiers`, `threatModel.adversaries` | Enable/disable prompt-injection mitigations per adversary list |
-| `audit-and-aide` | `dataClassification.tiers` | Classification-aware audit records |
-| Evidence generator (ARCH-10) | all of the above | Weekly evidence snapshot serialising meta state |
+| Module | Reads | Uses for | Status |
+|---|---|---|---|
+| `agent-sandbox` (AI-08) | `dataClassification.tiers`, `tenancy.mode` | Gate Restricted data; per-tenant UIDs in multi-tenant mode | stub |
+| `ai-services` (AI-09) | `dataClassification.tiers`, `threatModel.adversaries` | Enable/disable prompt-injection mitigations per adversary list | stub |
+| `audit-and-aide` | `dataClassification.tiers` | Classification-aware audit records | real code (INFRA-04 + ARCH-10) |
+| Evidence generator (ARCH-10) | all of the above | Weekly evidence snapshot serialising meta state | real code (ARCH-10) |
 
-None of these modules exist as real code yet. Meta ships the option shape so downstream PRs can consume on day one.
+The AI-side consumers are still stubs; the audit-and-aide side has shipped. Meta's option shape is already being read by the evidence framework.
 
 ## Override Ergonomics
 

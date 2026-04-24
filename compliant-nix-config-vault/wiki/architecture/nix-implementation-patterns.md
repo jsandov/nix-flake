@@ -176,4 +176,4 @@ Only 4 paths are visible. Compare to Ollama which needs GPU device access and ca
 - Sudo `secure_path` must use NixOS paths, not traditional `/usr/bin`
 - Ollama needs `PrivateDevices = false` + explicit `DeviceAllow` — unique among all services
 - `DynamicUser = true` + `TemporaryFileSystem = "/:ro"` is the maximum isolation pattern
-- See [[compliance-frameworks/canonical-config-values]] for the resolved values these patterns implement
+- See [[../compliance-frameworks/canonical-config-values]] for the resolved values these patterns implement

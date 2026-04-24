@@ -12,7 +12,7 @@ The entire system configuration is code. No configuration drift from imperative 
 
 ## 3. Atomic Upgrades and Rollback (CP-10, SI-2, CM-3)
 
-Updates are atomic — no partially-updated state. Previous generations retained at boot. `nixos-rebuild switch --rollback` provides instant recovery. Supports both [[shared-controls/incident-response-hooks|incident response]] and change management.
+Updates are atomic — no partially-updated state. Previous generations retained at boot. `nixos-rebuild switch --rollback` provides instant recovery. Supports both [[../shared-controls/shared-controls-overview|incident response]] (control 10 in the shared-controls overview) and change management.
 
 ## 4. Reproducible Builds (CM-2, SA-10)
 

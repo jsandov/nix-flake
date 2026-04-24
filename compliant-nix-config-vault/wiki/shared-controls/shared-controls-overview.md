@@ -1,6 +1,6 @@
 # Shared Controls Overview
 
-Sixteen controls demanded by multiple frameworks, implemented once in the appropriate [[architecture/flake-modules|flake module]].
+Sixteen controls demanded by multiple frameworks, implemented once in the appropriate [[../architecture/flake-modules|flake module]].
 
 ## Core Controls
 
@@ -18,9 +18,9 @@ Sixteen controls demanded by multiple frameworks, implemented once in the approp
 | 10 | Incident Response Hooks | audit-and-aide | NIST IR, HIPAA, PCI Req 12, HITRUST |
 | 11 | Backup and Recovery | stig-baseline | NIST CP, HIPAA, PCI Req 12, HITRUST |
 | 12 | Vulnerability Management | stig-baseline | NIST RA/SI, PCI Req 6, HIPAA, STIG |
-| 13 | [[secrets-management]] | stig-baseline | All frameworks |
+| 13 | [[secrets-management]] | secrets | All frameworks |
 | 14 | Boot Integrity (UEFI Secure Boot) | stig-baseline | STIG, NIST SI-7 |
-| 15 | Account Lifecycle Management | stig-baseline | All frameworks |
+| 15 | [[account-lifecycle]] | accounts | All frameworks |
 | 16 | Data Classification (4 levels) | All | All frameworks |
 
 ## Data Classification Scheme
@@ -35,6 +35,6 @@ Sixteen controls demanded by multiple frameworks, implemented once in the approp
 ## Key Takeaways
 
 - Most controls satisfy 3-5 frameworks simultaneously — build once, comply many
-- Agent sandboxing is the primary mitigation for [[ai-security/owasp-agentic-threats]]
+- Agent sandboxing is the primary mitigation for [[../ai-security/owasp-agentic-threats]]
 - Evidence generation runs weekly + on every rebuild — see [[evidence-generation]]
-- Vulnerability management timelines: Critical 30d, High 90d, Medium 180d — see [[compliance-frameworks/canonical-config-values]]
+- Vulnerability management timelines: Critical 30d, High 90d, Medium 180d — see [[../compliance-frameworks/canonical-config-values]]

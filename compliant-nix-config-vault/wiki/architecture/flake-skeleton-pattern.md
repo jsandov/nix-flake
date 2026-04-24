@@ -60,7 +60,7 @@ nix eval --raw --show-trace \
   .#nixosConfigurations.<host>.config.system.build.toplevel.drvPath
 ```
 
-`.drvPath` returns a string path — the evaluator walks the full module tree but the realiser is never invoked. This is what nixpkgs' own CI uses. `--show-trace` is essential for diagnosing the 17+ broken snippets catalogued in [[review-findings/master-review]]; without it, errors lose call-stack context.
+`.drvPath` returns a string path — the evaluator walks the full module tree but the realiser is never invoked. This is what nixpkgs' own CI uses. `--show-trace` is essential for diagnosing the 17+ broken snippets catalogued in [[../review-findings/master-review]]; without it, errors lose call-stack context.
 
 ## Key Takeaways
 

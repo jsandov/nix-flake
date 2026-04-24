@@ -39,7 +39,7 @@ CUDA's JIT compiler (NVRTC) requires W+X memory for PTX compilation. Enabling `M
 
 ## 7. Live Memory ePHI Exposure
 
-ePHI in RAM/VRAM during inference is unencrypted. LUKS provides no protection for running systems. See [[hipaa/live-memory-ephi-risk]] for full analysis.
+ePHI in RAM/VRAM during inference is unencrypted. LUKS provides no protection for running systems. See [[../hipaa/live-memory-ephi-risk]] for full analysis.
 
 ## 8. LLM Confidence Scores are Unreliable
 

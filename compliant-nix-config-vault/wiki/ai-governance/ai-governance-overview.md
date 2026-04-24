@@ -19,7 +19,7 @@ Four functions forming a continuous lifecycle:
 ### MEASURE — Testing and Monitoring
 - Pre-deployment: functional testing, adversarial prompts, bias assessment, performance baseline
 - Ongoing: inference latency, error rate, agent completion, model integrity, GPU utilization
-- Health checks every 5 minutes via systemd timer (NOT WatchdogSec — see [[nixos-platform/nixos-gotchas]])
+- Health checks every 5 minutes via systemd timer (NOT WatchdogSec — see [[../nixos-platform/nixos-gotchas]])
 
 ### MANAGE — Risk Treatment and Response
 - Four AI-specific incident types: harmful outputs, agent exceeding auth, model compromise, prompt injection

@@ -96,14 +96,14 @@ Both are acknowledged partial-hardening points. Documented in this article and i
 
 ## Emergency / Rescue Targets
 
-NixOS's default emergency and rescue units already use `sulogin`, which requires the root password. STIG requires this; the default satisfies it. No explicit config added — a comment in the module documents the dependency so evidence review (future ARCH-10) can confirm the behaviour.
+NixOS's default emergency and rescue units already use `sulogin`, which requires the root password. STIG requires this; the default satisfies it. No explicit config added — a comment in the module documents the dependency so [[../shared-controls/evidence-generation|evidence review]] can confirm the behaviour.
 
 If a future NixOS change weakens the default, evidence review catches the gap. Documenting-not-forcing is the right trade-off: forcing would require overriding a built-in unit, fragile, and the default is already correct.
 
 ## Related Gotchas
 
 - [[../nixos-platform/nixos-gotchas|#15]] — Flake inputs tracking mainline break silently. Lanzaboote is SHA-pinned, not `@main`.
-- [[../nixos-platform/nixos-gotchas|#17]] — `users.mutableUsers = false` triggers a lockout assertion unless a wheel user has SSH keys or a root password is set. Skeleton needs `users.allowNoPasswordLogin = lib.mkDefault true` escape hatch.
+- [[../nixos-platform/nixos-gotchas|#17]] — `users.mutableUsers = false` triggers a lockout assertion. Since ARCH-11, the [[../shared-controls/account-lifecycle|accounts module]] declares the admin user with SSH keys and satisfies the assertion structurally; the pre-ARCH-11 `users.allowNoPasswordLogin` escape hatch is retired.
 - [[../nixos-platform/nixos-gotchas|#18]] — `boot.tmp.useTmpfs` omits noexec.
 
 ## Key Takeaways

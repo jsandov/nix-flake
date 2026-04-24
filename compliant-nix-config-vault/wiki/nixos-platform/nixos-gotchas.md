@@ -83,6 +83,24 @@ Skeleton ships without a lock; CI's first green run produces one; commit it back
 
 **Fix:** prefer `cachix/install-nix-action@v27` for installation and `nix-community/cache-nix-action@v6` for caching. See [[github-actions-nix-stack]] for the full stack rationale.
 
+## 14. Module System Forces All-or-Nothing for `options` vs `config`
+
+A NixOS module can either:
+- omit explicit `options` / `config` attrs and let every top-level attr be implicit config, OR
+- declare `options.*` explicitly, in which case **every** config assignment must live under `config.*`.
+
+Mixing the two — top-level `sops = { ... }` alongside `options.secrets.rotationDays = mkOption { ... }` — fails eval with `Module <path> has an unsupported attribute 'sops'. This is caused by introducing a top-level 'config' or 'options' attribute.`
+
+**Fix:** the moment a module introduces `options.*`, wrap every other config assignment under `config = { ... };`. In the secrets module this means `config.sops = { ... }` rather than `sops = { ... }`.
+
+## 15. Flake Inputs Tracking Mainline Break Silently
+
+`github:Mic92/sops-nix` (no ref) resolves to the current master of sops-nix. On 2026-02-04 sops-nix master bumped `sops-install-secrets` to `buildGo125Module` and explicitly removed compatibility with NixOS 24.11 and 25.05. A flake that was green on Friday failed on Monday with `Function called without required argument "buildGo125Module"`.
+
+**Fix:** never `url = "github:owner/repo"` without a rev for a flake input that gates the build. Pin to a commit SHA — `github:Mic92/sops-nix/3b4a369df9...` is the last known-good point for nixos-24.11 as of 2026-04. Bump deliberately, not implicitly.
+
+**Follow-up rule:** when adopting a new flake input, grep its default branch for upcoming breaking changes (search the repo's commit history for `buildGo<N>Module`, dropped-compat notices, or explicit "bump to <new-nixpkgs>" commits) before pinning without a rev.
+
 ## Key Takeaways
 
 - Test every Nix snippet against real NixOS 24.11+ evaluation before committing
@@ -91,3 +109,5 @@ Skeleton ships without a lock; CI's first green run produces one; commit it back
 - Secrets management is the #1 operational risk — sops-nix is non-negotiable (agenix rejected; see [[../shared-controls/secrets-management]])
 - Linter rules (`statix`, `deadnix`) beat prose conventions because they run on every PR
 - DeterminateSystems-hosted CI actions now require FlakeHub auth — audit before adopting
+- When a module uses `options.*`, every config assignment must live under `config.*` — no mixing
+- Flake inputs without a rev track upstream mainline; pin to a SHA for any input that gates the build

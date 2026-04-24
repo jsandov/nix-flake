@@ -23,17 +23,17 @@ Work is split across three tracks that can progress semi-independently once the 
 
 ## Progress
 
-_Last updated: 2026-04-24 (second snapshot, after P1 batch-2 compile). Update on pause or major merge._
+_Last updated: 2026-04-24 (post-ARCH-10 evidence framework). Update on pause or major merge._
 
 | Priority | Done | Total |
 |---|---|---|
 | P0 | **15** | 16 |
-| P1 | **7** | 25 |
+| P1 | **8** | 25 |
 | P2 | 0 | 18 |
 | P3 | 0 | 9 |
-| **All** | **22** | **68** |
+| **All** | **23** | **68** |
 
-Only **AI-04** remains open among P0 — blocked on human SEV/TDX decision. Every other P0 closed. Seven P1s complete: `ARCH-07` (secret-leak lint), `ARCH-08` (meta module), `ARCH-09` (Secure Boot/lanzaboote), `ARCH-12` (RAG data flow §6.3), `ARCH-13` (residual-risks appendix), `INFRA-04` (first real module — audit-and-aide), `AI-14+15+16` (HITRUST 19-domain taxonomy).
+Only **AI-04** remains open among P0 — blocked on human SEV/TDX decision. Every other P0 closed. Eight P1s complete: `ARCH-07` (secret-leak lint), `ARCH-08` (meta module), `ARCH-09` (Secure Boot/lanzaboote), `ARCH-10` (evidence generation framework), `ARCH-12` (RAG data flow §6.3), `ARCH-13` (residual-risks appendix), `INFRA-04` (first real module — audit-and-aide), `AI-14+15+16` (HITRUST 19-domain taxonomy).
 
 Current state + next-slice guidance in `compliant-nix-config-vault/raw/session-pause-2026-04-24-cont.md`.
 

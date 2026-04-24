@@ -5,12 +5,39 @@ this project build and test `nixosConfigurations.ai-server` as a bootable
 artifact (ISO, qcow2, Vagrant box, VM for acceptance tests)? Is Packer still
 right? Is Vagrant earning its keep?
 
-**Research-method caveat.** `WebSearch`, `WebFetch`, `curl`, and `gh api`
-were sandbox-denied in this retry. Citations are paraphrased from
-training-cutoff knowledge; every version- or API-specific claim carries a
-`[verify: <url>]` marker for the upstream page to fetch before it is
-treated as ground truth. The structural recommendation is robust across
-version drift; only individual attribute/option claims need verification.
+**Verify pass (2026-04-24).** The initial draft carried 20 `[verify: <url>]`
+markers because WebSearch/WebFetch were sandbox-denied. A follow-up pass
+resolved every load-bearing claim against upstream and corrected two
+material items (see "What changed during the verify pass" below). Remaining
+`[verify: <url>]` markers are either duplicate citations, low-stakes
+pointers to nix.dev / reproducible-builds.org background, or items that
+require runtime validation (cross-build, byte-reproducibility) rather than
+a doc lookup.
+
+**What changed during the verify pass.**
+
+- `nixos-generators` is **archived as of 2026-01-30** (GitHub read-only).
+  Its content was upstreamed into nixpkgs starting with NixOS 25.05.
+  Implication for this project: on the current `nixos-24.11` pin, add
+  `nixos-generators` as a regular flake input and it works as described.
+  When the flake bumps to 25.05+, switch to the in-tree equivalents
+  (likely `pkgs.nixos-generators` or a `nixos/lib/*` entry point, TBD at
+  bump time). Does **not** invalidate the recommendation — changes only
+  the long-run source of the same capability.
+- `nixos-anywhere` **has no documented Secure Boot / lanzaboote howto** as
+  of v1.13.0 (Nov 2025). The draft cited `docs/howtos/secure-boot.md`; no
+  such file exists — verified against
+  https://github.com/nix-community/nixos-anywhere/tree/main/docs/howtos .
+  Current howtos cover kexec, disko modes, extra-files, ipv6, limited-ram,
+  nix-path, no-os, secrets, terraform, use-without-flakes. Implication:
+  SB enrolment on a nixos-anywhere-installed host is an **open lab
+  validation**, not a documented path — ARCH-25's runbook work is larger
+  than first assumed.
+- `pkgs.testers.runNixOSTest` is **confirmed canonical** for out-of-tree
+  consumers in nixpkgs 24.11+. `pkgs.nixosTest` is explicitly flagged
+  outdated in the current NixOS wiki. Reinforces the recommendation.
+- `disko` v1.13.0 (2026-01-20) confirmed; LUKS/LVM/mdadm supported;
+  documented as the partitioning back-end for `nixos-anywhere`.
 
 ---
 
@@ -45,13 +72,12 @@ version drift; only individual attribute/option claims need verification.
 - **What.** Templated multi-platform image builder; drives a base OS
   installer through a provisioner (shell, ansible, `nixos-rebuild`).
 - **Plugin status.** Community `packer-plugin-nixos` forks exist
-  (`nix-community/`, `nixbuild/`); none is listed in Packer's "Verified"
-  integration tier at training cutoff. `[verify: https://github.com/nix-community/packer-plugin-nixos]`
-  `[verify: https://developer.hashicorp.com/packer/integrations]`
+  (`nix-community/`, `nixbuild/`); **no `nix-community/packer-plugin-nixos`
+  appears in Packer's Verified integration tier** as of the 2026-04
+  verify pass — confirms the draft's skepticism. Usable but community-tier.
 - **Costs.** Second truth-source (HCL template re-encoding boot commands,
   disk, post-install). Provisioner phase executes outside Nix eval, so
-  inputs escape `flake.lock`. Also HashiCorp BSL licensing since 2023
-  `[verify: https://www.hashicorp.com/license-faq]`.
+  inputs escape `flake.lock`. Also HashiCorp BSL licensing since 2023.
 - **When right.** Non-NixOS base images; vendor installers (vSphere PXE).
   Not applicable here.
 - **When wrong.** Pure-NixOS outputs with a native builder available.
@@ -71,18 +97,24 @@ version drift; only individual attribute/option claims need verification.
 - **When wrong.** A single-OS NixOS project that can emit a driveable VM
   on its own.
 - **This flake.** `nixos-generators format vagrant-virtualbox` produces a
-  box on demand. Ship the box; no `Vagrantfile` in-tree.
-  `[verify: https://github.com/nix-community/nixos-generators#supported-formats]`
+  box on demand (format confirmed 2026-04 verify pass). Ship the box;
+  no `Vagrantfile` in-tree.
 
 ### `nixos-generators` (`github:nix-community/nixos-generators`)
 
-- **What.** Wraps `nixos/lib/make-disk-image.nix` to emit (training-cutoff
-  list): `iso`, `install-iso`, `install-iso-hyperv`, `qcow`, `qcow-efi`,
-  `raw`, `raw-efi`, `vm`, `vm-bootloader`, `vm-nogui`, `amazon`, `azure`,
-  `do`, `gce`, `hyperv`, `openstack`, `proxmox`, `proxmox-lxc`,
-  `vagrant-virtualbox`, `virtualbox`, `vmware`, `cloudstack`, `docker`,
-  `lxc`, `kexec`, `kexec-bundle`, `sd-aarch64`, `sd-aarch64-installer`.
-  `[verify: https://github.com/nix-community/nixos-generators#supported-formats]`
+- **Upstream status (verify pass 2026-04).** Repo **archived 2026-01-30**;
+  read-only. Starting with NixOS 25.05 the content was upstreamed into
+  nixpkgs. For this project on the current `nixos-24.11` pin the archived
+  flake input still works exactly as described; bump to 25.05+ will move
+  to the in-tree equivalents.
+- **What.** Wraps `nixos/lib/make-disk-image.nix` to emit 33 formats
+  (verified 2026-04 against the archived repo): `amazon`, `azure`,
+  `cloudstack`, `do`, `docker`, `gce`, `hyperv`, `install-iso`,
+  `install-iso-hyperv`, `iso`, `kexec`, `kexec-bundle`, `kubevirt`,
+  `linode`, `lxc`, `lxc-metadata`, `openstack`, `proxmox`, `proxmox-lxc`,
+  `qcow`, `qcow-efi`, `raw`, `raw-efi`, `sd-aarch64`, `sd-aarch64-installer`,
+  `sd-x86_64`, `vagrant-virtualbox`, `virtualbox`, `vm`, `vm-bootloader`,
+  `vm-nogui`, `vmware`.
 - **Costs.** One flake input. Shares the existing `nixosModules.*` outputs
   (flake.nix:50-61) for config reuse.
 - **When right.** Any NixOS project needing "one config, many image
@@ -100,7 +132,6 @@ version drift; only individual attribute/option claims need verification.
 - **What.** Every `nixosConfigurations.*` exposes
   `config.system.build.vm` — a qemu/KVM runner with the host's `/nix/store`
   shared via 9p. `nixos-rebuild build-vm` is the wrapper.
-  `[verify: https://nixos.org/manual/nixos/stable/#sec-running-nixos-tests-interactively]`
 - **Costs.** Zero. Requires KVM; aarch64 cannot KVM x86_64.
 - **When right.** Fast current-arch smoke on an x86_64 dev box (~30 s).
 - **When wrong.** Artifact distribution; cross-arch dev.
@@ -112,10 +143,10 @@ version drift; only individual attribute/option claims need verification.
 - **What.** In-tree NixOS test framework. Declares one or more machine
   definitions + a Python `testScript` (`machine.wait_for_unit`,
   `.succeed`, `.fail`, `.send_key`); runs headless under KVM; emits
-  pass/fail + logs. `runNixOSTest` is the flake-friendly entry in
-  `pkgs.testers.*`; `nixosTest` / `makeTest` are older but still supported.
-  `[verify: https://nixos.org/manual/nixos/stable/#sec-nixos-tests]`
-  `[verify: https://nixos.org/manual/nixos/stable/#sec-call-nixos-test-outside-nixpkgs]`
+  pass/fail + logs. **Verify pass 2026-04 confirms**: `pkgs.testers.runNixOSTest`
+  is the canonical, stable, out-of-tree entry as of nixpkgs 24.11+;
+  `pkgs.nixosTest` and `make-test-python.nix` are flagged outdated in the
+  current NixOS wiki. This project adopts `runNixOSTest`.
 - **Costs.** KVM on the runner. Serial per invocation; parallelism via
   multiple derivations.
 - **When right.** "Service X up, port Y answers, file Z has mode M,
@@ -123,29 +154,33 @@ version drift; only individual attribute/option claims need verification.
 - **When wrong.** Real TPM / GPU / LAN switch / SB enrolment — hardware lab.
 - **This flake.** Native fit for ARCH-17. Each criterion is a derivation
   under `checks.x86_64-linux.*`; `nix flake check` runs the fast subset,
-  nightly runs the full matrix. `[verify:
-  https://nixos.org/manual/nixpkgs/stable/#sec-tests-best-practices]`
+  nightly runs the full matrix.
 
 ### `nixos-anywhere`
 
 - **What.** Installs a flake-defined NixOS onto a remote machine already
   running some Linux: kexec minimal installer, partition via `disko`,
-  `nixos-install` over SSH. Supports non-root targets and reinstall of
-  NixOS hosts. `[verify: https://github.com/nix-community/nixos-anywhere]`
+  `nixos-install` over SSH. Current release v1.13.0 (Nov 2025). Uses
+  `disko` as the partitioning back-end per the README.
 - **Costs.** SSH reachability, `disko` config, kexec RAM floor; not for
   air-gapped.
 - **When right.** First-install on factory-fresh x86_64 with a rescue OS;
   remote re-provisioning.
 - **When wrong.** Air-gapped; tiny boot media.
-- **This flake.** Shares a `disko` layout with `nixos-generators`. Claims
-  lanzaboote support since v1.x `[verify:
-  https://github.com/nix-community/nixos-anywhere/blob/main/docs/howtos/secure-boot.md]`.
+- **This flake.** Shares a `disko` layout with `nixos-generators`.
+  **Secure Boot caveat (verify pass 2026-04):** no documented lanzaboote
+  / Secure Boot howto exists in `nixos-anywhere/docs/howtos/` as of
+  v1.13.0. Integration is a runtime question, not a doc-lookup question —
+  ARCH-25's runbook work is correspondingly larger. Non-root SSH target
+  support not explicitly documented in the README; maintainers point
+  follow-ups to the matrix room.
 
 ### `disko`
 
 - **What.** Declarative disk partition/filesystem layout as a Nix
-  attribute set; generates format/mount/install shell.
-  `[verify: https://github.com/nix-community/disko]`
+  attribute set; generates format/mount/install shell. Current release
+  v1.13.0 (2026-01-20). Verified 2026-04 to support LUKS / LVM / mdadm
+  and to be the partitioning back-end `nixos-anywhere` uses.
 - **Costs.** One flake input; one new module subtree.
 - **When right.** Layout-in-code; LUKS-on-disk tests in `runNixOSTest`.
 - **When wrong.** Pure containers with no bare-metal footprint.
@@ -218,12 +253,16 @@ enrol on first boot.**
 - Option (a) "systemd-boot → flip on first rebuild" ships a different
   bootloader than production, increasing first-boot drift.
 - Option (b) keeps the production bootloader config; first-boot runbook is
-  `sbctl create-keys && sbctl enroll-keys --microsoft && nixos-rebuild switch`.
-  `[verify: https://github.com/nix-community/lanzaboote/blob/master/docs/QUICK_START.md]`
+  `sbctl create-keys && sbctl enroll-keys --microsoft && nixos-rebuild switch`
+  (lanzaboote docs: https://nix-community.github.io/lanzaboote/ — the
+  old `docs/QUICK_START.md` path in the repo is a 404 as of 2026-04;
+  rendered docs are the authoritative entry point).
 
 SB verification in `runNixOSTest` needs OVMF + per-test-run nvram plumbing.
 Mark the SB-enrolment criterion as "hardware-only, tagged-release gate."
-`[verify: https://github.com/nix-community/lanzaboote/tree/master/nix/tests]`
+Lanzaboote carries its own `nix/tests` under the repo for maintainer use;
+an out-of-tree consumer like this flake should prefer the upstream docs
+site over spelunking the test tree.
 
 ---
 
@@ -273,9 +312,10 @@ keys off day-to-day CI; use a CI-scoped GPG sub-key, not the root key.
 metadata --json`, toplevel `drvPath`, image SHA-256, closure manifest
 (`nix-store --query --requisites`). Bundle as `ai-server-YYYYMMDD.meta.json`.
 Claim: *toplevel derivation* reproducibility, not byte-level file-hash —
-disk-image byte-reproducibility is not a current nixpkgs guarantee.
-`[verify: https://nix.dev/manual/nix/stable/advanced-topics/diff-hashes.html]`
-`[verify: https://reproducible-builds.org/docs/]`
+disk-image byte-reproducibility is not a current nixpkgs guarantee (see
+nix.dev's diff-hashes guide and reproducible-builds.org for the generic
+framing; project-specific verification remains an open question —
+see below).
 
 ---
 
@@ -341,10 +381,30 @@ change to sops-nix scope.
 
 ## Open questions
 
-- **`pkgs.testers.runNixOSTest` vs `nixosTest` / `makeTest` in nixpkgs 24.11.** The testers-namespaced form was promoted mid-24.x; confirm canonical entry before ARCH-17 lands. `[verify: https://nixos.org/manual/nixos/stable/release-notes#sec-release-24.11]`
-- **`nixos-anywhere` + lanzaboote end-to-end** with SB key enrolment over SSH — believed v1.x+. `[verify: https://github.com/nix-community/nixos-anywhere/blob/main/docs/howtos/secure-boot.md]`
-- **Disk-image byte-reproducibility in 24.11.** Is `make-disk-image` byte-reproducible, or only toplevel-reproducible? Affects evidence-manifest wording. `[verify: https://github.com/NixOS/nixpkgs/blob/release-24.11/nixos/lib/make-disk-image.nix]`
-- **Cross-build from aarch64 to x86_64 on CI.** Any module forcing IFD or a native eval that breaks cross-build? Needs a dry-run before ARCH-24.
-- **Signing-key ceremony for ARCH-23.** Root key holder; sub-key location; revocation path. Human decision.
-- **PR-tier subset selection.** Which prd.md §10 criteria are cheap enough per-PR? Measurement pass post-harness.
-- **`install-iso` vs `iso`.** Live media with `nixos-install` vs boot-the-configured-system; `install-iso` is conventional for bare-metal. Confirm operator preference.
+- **`nixos-anywhere` + lanzaboote end-to-end** with SB key enrolment over
+  SSH. The draft speculated a documented path at
+  `docs/howtos/secure-boot.md`; **verify pass 2026-04 confirms no such
+  file exists** (howtos cover kexec, disko modes, extra-files, ipv6,
+  limited-ram, nix-path, no-os, secrets, terraform, use-without-flakes).
+  This is a runtime / lab question; ARCH-25's runbook will need original
+  integration work rather than a doc pointer.
+- **Disk-image byte-reproducibility in 24.11.** Is `make-disk-image`
+  byte-reproducible, or only toplevel-reproducible? Affects evidence-
+  manifest wording. Not resolvable by doc lookup; needs a build-and-
+  diff experiment on the nightly CI job once ARCH-21 lands.
+- **Cross-build from aarch64 to x86_64 on CI.** Any module forcing IFD or
+  a native eval that breaks cross-build? Needs a dry-run before ARCH-24.
+- **Signing-key ceremony for ARCH-23.** Root key holder; sub-key location;
+  revocation path. Human decision.
+- **PR-tier subset selection.** Which prd.md §10 criteria are cheap enough
+  per-PR? Measurement pass post-harness.
+- **`install-iso` vs `iso`.** Live media with `nixos-install` vs
+  boot-the-configured-system; `install-iso` is conventional for
+  bare-metal. Confirm operator preference.
+- **Bump timing from nixos-24.11 to 25.05+.** When the flake bumps,
+  switch from the archived `github:nix-community/nixos-generators` input
+  to the in-tree upstream. No urgency; capability is identical until then.
+
+**Resolved in verify pass 2026-04-24 (previously open):**
+- `pkgs.testers.runNixOSTest` is canonical/stable for out-of-tree use
+  in 24.11+; `pkgs.nixosTest` is outdated per the current NixOS wiki.

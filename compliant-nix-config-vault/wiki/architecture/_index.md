@@ -14,3 +14,4 @@ System architecture for the compliance-mapped NixOS AI server.
 - [[data-flows]] — How data moves through the inference and agent pipelines
 - [[threat-model]] — Protected assets, adversary model, and scope boundaries
 - [[build-and-test-strategy]] — nixos-generators + runNixOSTest + nixos-anywhere + disko; CI cadence tiers (per-PR fast / nightly full / release-only signing)
+- [[module-aggregator-pattern]] — when to split a module family into `imports = [ ./a.nix ./b.nix ]`; aggregator-owned cross-submodule defaults; ARCH-16 compatibility

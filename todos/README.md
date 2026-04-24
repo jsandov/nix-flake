@@ -21,30 +21,44 @@ Work is split across three tracks that can progress semi-independently once the 
 - **P2** — should be done before Phase 3 wrap-up. Hardening, evidence pipelines, and compliance coverage.
 - **P3** — post-Phase-3 polish, advanced hardware controls, ongoing cadence.
 
+## Progress
+
+_Last updated: 2026-04-24. Update on pause or major merge._
+
+| Priority | Done | Total |
+|---|---|---|
+| P0 | **7** | 16 |
+| P1 | 0 | 25 |
+| P2 | 0 | 18 |
+| P3 | 0 | 9 |
+| **All** | **7** | **68** |
+
+Current branch/PR cadence and design decisions preserved in `compliant-nix-config-vault/raw/session-pause-2026-04-24.md`.
+
 ## Stack-ranked P0 list (do first)
 
 The P0 queue is ordered by unblocking power — earlier items unblock later ones.
 
-| # | ID | Title | Effort |
-|---|---|---|---|
-| 1 | ARCH-01 | Bootstrap flake skeleton and six-module layout | M |
-| 2 | ARCH-03 | CI: `nix flake check` + `nix eval` on every commit | S |
-| 3 | ARCH-02 | Extract Appendix A canonical config into a single source-of-truth module | M |
-| 4 | ARCH-04 | Resolved Settings Table as machine-readable data | S |
-| 5 | ARCH-05 | Pick and implement a secrets module (sops-nix) | M |
-| 6 | ARCH-06 | Strip `/usr/bin`, `/sbin`, `/usr/sbin` references everywhere | S |
-| 7 | INFRA-03 | Remove every phantom / deprecated NixOS option flagged in MASTER-REVIEW | S |
-| 8 | INFRA-01 | Rewrite `lan-only-network` firewall to nftables with correct egress | M |
-| 9 | INFRA-02 | Bind all listeners (Ollama, app API, SSH) to loopback / LAN NIC | S |
-| 10 | AI-06 | Lock `OLLAMA_HOST` to loopback and harden ai-services exposure | S |
-| 11 | AI-01 | Scope `MemoryDenyWriteExecute` to non-CUDA services only | S |
-| 12 | AI-02 | Remove `WatchdogSec` from Ollama, replace with external health timer | S |
-| 13 | AI-03 | Fix `ai-model-fetch` for Ollama's content-addressed blob format | M |
-| 14 | AI-07 | Correct `OLLAMA_NOPRUNE` framing (not a security control) | S |
-| 15 | AI-05 | Disable core dumps system-wide (prevent ePHI on disk) | S |
-| 16 | AI-04 | **DECISION:** disposition live-memory ePHI risk — SEV/TDX vs accepted risk | M |
+| # | ID | Title | Effort | Status |
+|---|---|---|---|---|
+| 1 | ARCH-01 | Bootstrap flake skeleton and six-module layout | M | ✓ PR #20 |
+| 2 | ARCH-03 | CI: `nix flake check` + `nix eval` on every commit | S | ✓ PR #20 |
+| 3 | ARCH-02 | Extract Appendix A canonical config into a single source-of-truth module | M | ✓ PR #22 |
+| 4 | ARCH-04 | Resolved Settings Table as machine-readable data | S | ✓ PR #23 |
+| 5 | ARCH-05 | Pick and implement a secrets module (sops-nix) | M | ✓ PR #26 (+ #27 hotfix) |
+| 6 | ARCH-06 | Strip `/usr/bin`, `/sbin`, `/usr/sbin` references everywhere | S | ✓ PR #29 |
+| 7 | INFRA-03 | Remove every phantom / deprecated NixOS option flagged in MASTER-REVIEW | S | ✓ PR #30 |
+| 8 | INFRA-01 | Rewrite `lan-only-network` firewall to nftables with correct egress | M | next |
+| 9 | INFRA-02 | Bind all listeners (Ollama, app API, SSH) to loopback / LAN NIC | S | next |
+| 10 | AI-06 | Lock `OLLAMA_HOST` to loopback and harden ai-services exposure | S | |
+| 11 | AI-01 | Scope `MemoryDenyWriteExecute` to non-CUDA services only | S | |
+| 12 | AI-02 | Remove `WatchdogSec` from Ollama, replace with external health timer | S | |
+| 13 | AI-03 | Fix `ai-model-fetch` for Ollama's content-addressed blob format | M | |
+| 14 | AI-07 | Correct `OLLAMA_NOPRUNE` framing (not a security control) | S | |
+| 15 | AI-05 | Disable core dumps system-wide (prevent ePHI on disk) | S | |
+| 16 | AI-04 | **DECISION:** disposition live-memory ePHI risk — SEV/TDX vs accepted risk | M | blocked on human |
 
-Totals: 6 ARCH, 3 INFRA, 7 AI = 16 P0 items.
+Totals: 6 ARCH, 3 INFRA, 7 AI = 16 P0 items. **7 of 16 complete.**
 
 ## P1 foundation queue
 

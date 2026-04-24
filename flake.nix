@@ -41,6 +41,7 @@
           ./modules/gpu-node
           ./modules/lan-only-network
           ./modules/audit-and-aide
+          ./modules/accounts
           ./modules/agent-sandbox
           ./modules/ai-services
         ];
@@ -54,6 +55,7 @@
         gpu-node = ./modules/gpu-node;
         lan-only-network = ./modules/lan-only-network;
         audit-and-aide = ./modules/audit-and-aide;
+        accounts = ./modules/accounts;
         agent-sandbox = ./modules/agent-sandbox;
         ai-services = ./modules/ai-services;
       };

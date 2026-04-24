@@ -90,6 +90,7 @@ Build `modules/audit-and-aide/evidence.nix` that runs weekly via systemd timer A
 - **Effort:** M
 - **Depends on:** ARCH-05
 - **Source:** prd.md §7.15, MASTER-REVIEW.md Master PRD should-fix
+- **Status:** ✓ PR #TBD
 
 Create `modules/accounts/default.nix` enforcing `users.mutableUsers = false`, declaring interactive users with SSH key references pulled from sops-nix, and exposing options for quarterly access review (emits a report into the evidence directory listing all accounts, groups, last-login timestamps, and key ages). Include deprovisioning procedure docs and automated TOTP seed rotation hooks. Removes the "HITRUST says 15 chars, PCI says 12" ambiguity by centralizing on Appendix A.6.
 

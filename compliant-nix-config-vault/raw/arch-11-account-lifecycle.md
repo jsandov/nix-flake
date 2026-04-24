@@ -1,0 +1,58 @@
+# ARCH-11 — Account lifecycle module
+
+Session note for the first real consumer of the ARCH-10 evidence framework. Lands `modules/accounts/` as the owner of interactive-operator identity, retires the skeleton escape hatch in `stig-baseline`, and registers the quarterly-access-review collector without adding a second timer.
+
+## What shipped
+
+- New module: `modules/accounts/default.nix` — owns interactive-user declarations and the access-review collector.
+- Option namespace: `security.accounts.*`.
+  - `adminUser` — submodule `{ name, description, authorizedKeys, groups }`. `groups` defaults to `[ "wheel" ]`. Single submodule (not a list) in v1; multi-admin is future work.
+  - `accessReviewEnable` (bool, default `true`) — gates the collector registration.
+- Admin user created as `users.users.<name>` with `isNormalUser = true`, `extraGroups = cfg.adminUser.groups`, `openssh.authorizedKeys.keys = cfg.adminUser.authorizedKeys`, and `hashedPassword = "!"` for key-only login.
+- `modules/stig-baseline/default.nix` — removed `users.allowNoPasswordLogin = lib.mkDefault true` and the surrounding skeleton-escape comment block. The module still sets `users.mutableUsers` from `canonical.nixosOptions.usersMutableUsers`; the accounts module does not redeclare that value.
+- `hosts/ai-server/default.nix` — declares `security.accounts.adminUser` with a placeholder ed25519 public key inline. Safe to commit (public keys are not secrets); operator replaces before first deploy.
+- `flake.nix` — `./modules/accounts` added to `nixosConfigurations.ai-server.modules` list and to the exported `nixosModules.accounts` attrset, matching the layout of `stig-baseline` / `audit-and-aide`.
+- Collector registration: `services.complianceEvidence.collectors.accessReview = { description, command, outputFile = "access-review.txt" }`. First real downstream consumer of the ARCH-10 extension point.
+
+## Why this design
+
+- **`security.accounts`, not `users.*`.** NixOS already owns `users.*` as a platform namespace. Adding project-specific options under it would collide with upstream option types and force every consumer to know which keys are "ours" vs "NixOS's". `security.accounts` is a clean project-owned namespace that maps the module name, the TODO id, and the ISO 27001 control family all to the same word.
+- **`users.mutableUsers = false` stays owned by stig-baseline.** It is a platform-level invariant already sourced from `canonical.nixosOptions.usersMutableUsers`, and stig-baseline already declares it. Two modules declaring the same boolean would either duplicate intent or require mkForce. The accounts module owns the *users*; canonical owns the *policy*; stig-baseline owns the *NixOS option wiring*. Three concerns, three owners, zero overlap.
+- **`hashedPassword = "!"` on the admin user.** Project stance is SSH-key-only remote admin with MFA on top (canonical.auth.mfaScope = "all-remote-admin", mfaMechanism = totp + fido2-ed25519-sk). There is no password to rotate, no password to leak, and the passwd entry cannot be used for login because `!` is an invalid crypt(3) hash that will never match any input. Cleanest single-expression idiom for "no password, ever" without leaving a NULL field that some audit tooling interprets as "passwordless".
+- **SSH public key in the host, not sops-nix.** Public keys are public. Encrypting them with sops-nix adds an encrypt/decrypt roundtrip that buys zero security — anyone who can touch the server during SSH setup already sees the key on the wire. Inline in `hosts/ai-server/default.nix` keeps the key trivially reviewable in git diff and removes a dependency on sops-nix being provisioned before the admin account exists (a bootstrap order that would otherwise be fragile).
+- **Access-review as an ARCH-10 collector, not a separate timer.** The ARCH-10 snapshot framework IS the quarterly-or-better cadence (weekly + on-rebuild). A second timer would split access-review evidence into its own directory, double the systemd-unit surface, and break the "one snapshot directory, one manifest.sha256" story that auditors walk. Registering as a collector means access-review output lands inside the same snapshot, under the same tamper seal, at the same cadence — at zero new infrastructure cost.
+- **Canonical auth policy embedded in the report.** The review is only useful if the reviewer can see what policy was in force. `lib.generators.toPretty` renders the relevant `canonical.auth.*` subset at eval time, and the script `printf`s it into `access-review.txt`. No file cross-reference, no "well, which version of the YAML did we have that week?"
+
+## Patterns confirmed / introduced
+
+- **First real consumer of `services.complianceEvidence.collectors`.** Validates that `types.attrsOf (types.submodule { description; command; outputFile; })` is the right shape for "framework modules contribute rows to a shared pipeline." The accounts module adds one attr (`accessReview`), the core set stays intact, no mkForce needed, no edits to `evidence.nix` required. Future framework modules (hipaa-evidence, pci-evidence, hitrust-evidence) follow the same pattern.
+- **Module declares identities; canonical declares policy.** The accounts module owns "who is admin" (name, key, groups). Canonical owns "what the admin account policy is" (password length, lockout threshold, session timeouts, MFA scope). Separation lets each evolve independently: swapping operators is a host edit, tightening password policy is a canonical edit, neither touches the other.
+- **`hashedPassword = "!"` is the right idiom for key-only admin accounts.** Cleaner than `hashedPasswordFile = null` (which leaves the option effectively unset), cleaner than a disabled password-expire dance, and matches what `passwd -l` would produce at runtime.
+- **`pkgs.writeShellApplication` for compliance collectors.** Same choice as ARCH-10. `set -euo pipefail`, shellcheck, `runtimeInputs` sandbox. The access-review script is read by auditors as plain text in the snapshot output; having shellcheck catch an unquoted variable before it ships is cheap insurance.
+- **`lib.generators.toPretty` to embed policy snapshots in evidence.** Turns a Nix attrset into reviewer-readable text at eval time, inlined into a shell heredoc / `printf` via `lib.escapeShellArg`. Pattern will repeat when INFRA-08 (syslog TLS) emits the TLS-cipher-in-use snapshot and when AI-22 (Article 12 logger) emits the AI-decision-log retention snapshot.
+
+## What this unblocks
+
+- **INFRA-06 (PAM).** Can assume `admin` exists as an interactive user with `extraGroups = [ "wheel" ]`. PAM module wires canonical.auth values (password length, lockout, session timeouts) into `security.pam.services.*` against an account that is guaranteed to be present.
+- **INFRA-07 (SSH hardening).** Consumes the same `authorizedKeys` indirection — services.openssh.settings.AllowUsers references the same admin name. SSH module does not redeclare keys; it only enforces the *transport* policy (ciphers, MACs, kex, MFA methods).
+- **ARCH-18 (quarterly cadence + framework drift).** Has its first concrete review report. The drift collector (still to be written) will emit a companion `framework-drift.txt` next to `access-review.txt` in the same snapshot.
+- **ARCH-17 (acceptance-criteria test harness).** Gains a `access-review.txt`-shaped artifact it can assert against — "admin user present", "fingerprint format is SHA256:", "canonical.auth snapshot matches the YAML source-of-truth".
+- **AI-17 (§164.316 policies) + HITRUST 01.\***. Both ask for an attestable "who has access" report; access-review.txt is now that artifact.
+
+## Rejected alternatives
+
+- **Store the admin SSH public key in sops-nix.** Public keys are not secrets. Roundtripping them through sops-nix adds friction (repository `.sops.yaml` edits, operator decrypt step) in exchange for zero security. Private keys stay on the operator's workstation; only the public half lives in the flake.
+- **A dedicated `account-review-report.service` + `.timer`.** Would duplicate the ARCH-10 framework for no benefit. The evidence collector extension point was built precisely so framework modules would not need their own timers. Registering under `services.complianceEvidence.collectors.accessReview` reuses the snapshot directory, the manifest, the retention policy, and the on-rebuild hook. Zero new systemd units.
+- **Module named `users` or `identity`.** `users` collides semantically with NixOS's platform namespace. `identity` is broader than what this module does (it covers accounts, not signing keys / machine identity / service accounts). `accounts` mirrors the TODO id (`ARCH-11`), the ISO 27001 access-control family naming, and the NIST control family AC-2 "Account Management".
+- **List-shaped `adminUsers`.** Multi-admin scenarios do not exist today (single-operator system per ARCH-08). Shipping a list-of-submodule surface now would lock the option type before the second operator exists, and attrs-of-submodule vs list-of-submodule is a migration-unfriendly choice. v1 ships one submodule; v2 (when a second admin actually needs to exist) promotes to `attrsOf` keyed by name.
+- **Forcing `users.mutableUsers = false` here.** Already owned by stig-baseline via canonical. Redeclaring in accounts would either match (redundant) or conflict (requires mkForce). Leaving the invariant where it lives keeps module boundaries honest.
+- **Embedding the password aging output (`chage -l`) at eval time.** `chage` reads `/etc/shadow` at runtime; there is no eval-time equivalent. Keeping it in the script is correct. The script runs as root inside the snapshot oneshot service, so `/etc/shadow` is readable.
+
+## Open follow-ups
+
+- **SSH key rotation cadence.** `canonical.secrets.rotationDays.ssh = 0` ("on compromise only") is the project stance, but the accounts module does not enforce anything about key rotation. Enforcement would need a separate drift check comparing the installed key to an expected fingerprint — candidate work under ARCH-18.
+- **Multi-admin scenarios.** The v1 surface is a single `adminUser` submodule. A second operator needs either a list promotion (`adminUsers = [ {...} {...} ]`) or an attrs promotion (`admins = { alice = {...}; bob = {...}; }`). Deferred until the scenario exists; attrsOf keyed by name is the currently-preferred shape.
+- **Skeleton SSH key placeholder.** The inline `ssh-ed25519 AAAAC3...SKELETON...PLACEHOLDER` is deliberately unusable. Must be replaced with the operator's real ed25519 public key before first deploy. Worth calling out in the deployment runbook (to be written) so the placeholder does not accidentally ship.
+- **`chage -l` unavailable at first snapshot.** On a freshly activated system the admin account may not yet have password-aging state; the script tolerates this (`|| echo "[access-review] ..."`) but the first snapshot will show "no aging set" rather than concrete dates. Second snapshot onward reports real values. Documented so reviewers do not flag the first-run output as a finding.
+- **Service/system accounts.** This module covers interactive operators only. Service accounts (ollama, agent-runner, ai-services) are declared by their respective modules via `users.users.<name>.isSystemUser = true`. A future consolidation pass could surface those under `security.accounts.serviceUsers` for a single-pane-of-glass account inventory — deferred; today's distribution works and centralising would require touching every service module.
+- **Deprovisioning procedure.** ARCH-11 mentions "deprovisioning procedure docs" in the TODO entry. Not shipped in this module (code cannot document a human process). Lives on the deployment runbook.

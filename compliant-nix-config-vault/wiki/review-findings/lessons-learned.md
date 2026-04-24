@@ -33,9 +33,20 @@ Key lessons from the PRD development and review process.
 18. **Split Phase 2** — validate gpu-node independently before building ai-services on top
 19. **Control matrix belongs in Phase 1** — it's the traceability backbone
 
+## Implementation Bring-Up Lessons (ARCH-01 → ARCH-04)
+
+Process-level lessons from the first four P0 TODOs landing — orthogonal to the PRD-phase lessons above.
+
+20. **When there is no local `nix` CLI, CI *is* the evaluator.** Write Nix conservatively, push, let [[../architecture/ci-gate]] surface the errors in 1–2 minutes. Budget for ≥1 iteration on every non-trivial PR. Four iterations on the skeleton PR wasn't a failure mode — it was how broken patterns revealed themselves one layer at a time.
+21. **Supply-chain drift in CI actions is fast.** `DeterminateSystems/magic-nix-cache-action` changed between 2024 (zero-config) and 2026 (requires FlakeHub auth) with no workflow-visible signal. Pin action versions to commit SHAs and re-verify the stack every 6 months. See [[../nixos-platform/github-actions-nix-stack]].
+22. **One concept, two artifacts — audit vs runtime.** A cross-framework resolution lives in a Nix-consumable module (`canonical.nix`) *and* an audit-consumable YAML (`resolved-settings.yaml`). Neither audience can use the other's format. See [[../shared-controls/canonical-config]]. Expect this pattern to repeat for evidence generation, threat model, and the model registry.
+23. **PR cadence: one P0 per PR, batch wiki compiles.** Granular PRs clear CI faster, review more cleanly, and avoid CI-cache contention. Wiki compiles are cheap enough to batch 2–3 TODOs per compile PR.
+24. **Prefer a lint over a one-shot audit.** ARCH-06's goal ("strip `/usr/bin` everywhere") was 80% preempted by a five-line grep in the CI workflow. When a TODO is primarily about "don't let X happen," a permanent lint beats a manual sweep — the lint keeps working forever.
+
 ## Key Takeaways
 
 - Most lessons are about NixOS being different from traditional Linux, not NixOS being wrong
 - The biggest meta-lesson: compliance-as-code works, but only if you validate the code
-- Start with [[shared-controls/shared-controls-overview]] — they satisfy the most frameworks per unit of effort
-- Review [[compliance-frameworks/canonical-config-values]] before writing any Nix — it prevents the duplication problem
+- CI is not a gate; it is a tight feedback loop. Plan for iteration.
+- Start with [[../shared-controls/shared-controls-overview]] — they satisfy the most frameworks per unit of effort
+- Review [[../shared-controls/canonical-config]] before writing any Nix — it prevents the duplication problem

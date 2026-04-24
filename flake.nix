@@ -11,10 +11,18 @@
       url = "github:Mic92/sops-nix/3b4a369df9dd6ee171a7ea4448b50e2528faf850";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    lanzaboote = {
+      # Pinned by commit SHA — never `@main` for inputs that gate the
+      # build (see nixos-gotchas #15 + lessons-learned 26). Commit as of
+      # 2026-04-21. Bump deliberately; audit the diff for breaking
+      # changes to `boot.lanzaboote.*` option names before rotating.
+      url = "github:nix-community/lanzaboote/4eda91dd5abd2157a2c7bfb33142fc64da668b0a";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    { nixpkgs, sops-nix, ... }:
+    { nixpkgs, sops-nix, lanzaboote, ... }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -24,6 +32,7 @@
         inherit system;
         modules = [
           sops-nix.nixosModules.sops
+          lanzaboote.nixosModules.lanzaboote
           ./hosts/ai-server
           ./modules/canonical
           ./modules/meta

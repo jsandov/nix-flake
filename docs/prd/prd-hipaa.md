@@ -1022,31 +1022,39 @@ The system must be able to detect potential breaches of unsecured ePHI. "Unsecur
 
 ```nix
 {
-  # Block and log all outbound Internet traffic from AI services
-  # NOTE: These iptables rules are illustrative. The implementation flake
-  # uses nftables exclusively per prd.md Appendix A.2. Convert to nftables:
-  #   iptables -A OUTPUT -m owner --uid-owner ollama → meta skuid ollama
-  #   See nftables documentation for per-UID egress filtering syntax.
-  networking.firewall.extraCommands = ''
-    # Log any outbound traffic from service users that is not to the LAN
-    iptables -A OUTPUT -m owner --uid-owner ollama -d 10.0.0.0/8 -j ACCEPT
-    iptables -A OUTPUT -m owner --uid-owner ollama -d 172.16.0.0/12 -j ACCEPT
-    iptables -A OUTPUT -m owner --uid-owner ollama -d 192.168.0.0/16 -j ACCEPT
-    iptables -A OUTPUT -m owner --uid-owner ollama -j LOG --log-prefix "BREACH-DETECT: "
-    iptables -A OUTPUT -m owner --uid-owner ollama -j DROP
+  # Block and log all outbound Internet traffic from AI services.
+  # nftables per prd.md Appendix A.2 — per-UID egress filtering via
+  # `meta skuid`, not iptables `--uid-owner` (which does not exist
+  # in the nftables backend). Never use `networking.firewall.extraCommands`
+  # with iptables syntax on NixOS 24.11+.
+  networking.nftables.tables.per-uid-egress = {
+    family = "inet";
+    content = ''
+      chain output-filter {
+        type filter hook output priority 0; policy drop;
+        ct state established,related accept
+        oif lo accept
 
-    iptables -A OUTPUT -m owner --uid-owner ai-services -d 10.0.0.0/8 -j ACCEPT
-    iptables -A OUTPUT -m owner --uid-owner ai-services -d 172.16.0.0/12 -j ACCEPT
-    iptables -A OUTPUT -m owner --uid-owner ai-services -d 192.168.0.0/16 -j ACCEPT
-    iptables -A OUTPUT -m owner --uid-owner ai-services -j LOG --log-prefix "BREACH-DETECT: "
-    iptables -A OUTPUT -m owner --uid-owner ai-services -j DROP
+        # ollama: LAN-only outbound
+        meta skuid ollama ip daddr 10.0.0.0/8 accept
+        meta skuid ollama ip daddr 172.16.0.0/12 accept
+        meta skuid ollama ip daddr 192.168.0.0/16 accept
+        meta skuid ollama log prefix "BREACH-DETECT ollama: " drop
 
-    iptables -A OUTPUT -m owner --uid-owner agent -d 10.0.0.0/8 -j ACCEPT
-    iptables -A OUTPUT -m owner --uid-owner agent -d 172.16.0.0/12 -j ACCEPT
-    iptables -A OUTPUT -m owner --uid-owner agent -d 192.168.0.0/16 -j ACCEPT
-    iptables -A OUTPUT -m owner --uid-owner agent -j LOG --log-prefix "BREACH-DETECT: "
-    iptables -A OUTPUT -m owner --uid-owner agent -j DROP
-  '';
+        # ai-services: LAN-only outbound
+        meta skuid ai-services ip daddr 10.0.0.0/8 accept
+        meta skuid ai-services ip daddr 172.16.0.0/12 accept
+        meta skuid ai-services ip daddr 192.168.0.0/16 accept
+        meta skuid ai-services log prefix "BREACH-DETECT ai-services: " drop
+
+        # agent: LAN-only outbound
+        meta skuid agent ip daddr 10.0.0.0/8 accept
+        meta skuid agent ip daddr 172.16.0.0/12 accept
+        meta skuid agent ip daddr 192.168.0.0/16 accept
+        meta skuid agent log prefix "BREACH-DETECT agent: " drop
+      }
+    '';
+  };
 }
 ```
 
@@ -1395,7 +1403,7 @@ The following prioritization considers both HIPAA compliance impact and implemen
 | AIDE integrity monitoring | `audit-and-aide` | 164.312(c)(2) | AIDE with ePHI directory coverage |
 | TLS on API endpoints | `ai-services` | 164.312(e)(2) | Nginx reverse proxy with TLS termination and AEAD ciphers |
 | Agent sandbox hardening | `agent-sandbox` | 164.312(a)(1), 164.308(a)(3) | systemd `ProtectSystem`, `ReadWritePaths`, `RestrictAddressFamilies`, `MemoryDenyWriteExecute` (non-GPU services only) |
-| Outbound traffic blocking for services | `lan-only-network` | 164.312(e)(1) | iptables OUTPUT rules per service user |
+| Outbound traffic blocking for services | `lan-only-network` | 164.312(e)(1) | nftables per-UID egress rules (`meta skuid`) per service user |
 | Persistent journal with retention | `audit-and-aide` | 164.312(b) | `services.journald.extraConfig` |
 | BorgBackup for ePHI data | `stig-baseline` | 164.308(a)(7) | `services.borgbackup.jobs` with encryption |
 | Account lockout on failed auth | `stig-baseline` | 164.312(d) | `security.pam.services.sshd.faillock` |

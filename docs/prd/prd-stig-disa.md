@@ -1529,9 +1529,12 @@ STIG requires centralized logging to a remote SIEM for tamper-resistant log rete
     psmisc
     util-linux
 
-    # Network diagnostics (restricted to admin use)
+    # Network diagnostics (restricted to admin use). nftables is the
+    # project backend per prd.md Appendix A.2; do not add the legacy
+    # `iptables` package — it resolves to `iptables-nft` on 24.11 and
+    # produces confusing output when admins expect native iptables
+    # semantics. Use `nft` directly.
     iproute2
-    iptables
     nftables
     tcpdump  # CAT III: consider removing if not needed for troubleshooting
 
@@ -1773,10 +1776,15 @@ Full-disk encryption is a boot-time requirement, not configured in the flake its
     '';
 
     virtualHosts = {
-      # Reverse proxy for Ollama API
+      # Reverse proxy for Ollama API.
+      # Nginx is the one service intentionally exposed on the LAN; bind
+      # to the LAN interface address, never 0.0.0.0 on multi-NIC hosts
+      # (per prd.md Appendix A.1). For a single-NIC host, the LAN
+      # interface address equals 0.0.0.0 plus firewall gating — prefer
+      # the explicit address so intent survives a future second NIC.
       "ollama.internal" = {
         listen = [
-          { addr = "0.0.0.0"; port = 443; ssl = true; }
+          { addr = "<LAN_INTERFACE_IP>"; port = 443; ssl = true; }
         ];
         sslCertificate = "/var/lib/nginx/ssl/server.crt";
         sslCertificateKey = "/var/lib/nginx/ssl/server.key";
@@ -1793,10 +1801,11 @@ Full-disk encryption is a boot-time requirement, not configured in the flake its
         };
       };
 
-      # Reverse proxy for Application API
+      # Reverse proxy for Application API — same LAN-interface rule as
+      # the Ollama virtualHost above.
       "api.internal" = {
         listen = [
-          { addr = "0.0.0.0"; port = 8443; ssl = true; }
+          { addr = "<LAN_INTERFACE_IP>"; port = 8443; ssl = true; }
         ];
         sslCertificate = "/var/lib/nginx/ssl/server.crt";
         sslCertificateKey = "/var/lib/nginx/ssl/server.key";
@@ -2014,23 +2023,31 @@ Full-disk encryption is a boot-time requirement, not configured in the flake its
     connectionTrackingModules = [];
     autoLoadConntrackHelpers = false;
 
-    # Additional nftables rules for egress control
-    extraCommands = ''
-      # Block all outbound traffic except to LAN and loopback
-      iptables -A OUTPUT -o lo -j ACCEPT
-      iptables -A OUTPUT -d 10.0.0.0/8 -j ACCEPT
-      iptables -A OUTPUT -d 172.16.0.0/12 -j ACCEPT
-      iptables -A OUTPUT -d 192.168.0.0/16 -j ACCEPT
+    # (extraCommands intentionally unused — see separate nftables table below)
+  };
 
-      # Allow DNS to LAN DNS server (adjust IP as needed)
-      iptables -A OUTPUT -p udp --dport 53 -d 10.0.0.1 -j ACCEPT
-      iptables -A OUTPUT -p tcp --dport 53 -d 10.0.0.1 -j ACCEPT
+  # Egress control via nftables (NixOS 24.11 default; never mix with
+  # iptables-style extraCommands — the two backends conflict).
+  networking.nftables.tables.egress-control = {
+    family = "inet";
+    content = ''
+      chain output-lan-only {
+        type filter hook output priority 0; policy drop;
+        ct state established,related accept
+        oif lo accept
 
-      # Allow NTP to configured time servers
-      iptables -A OUTPUT -p udp --dport 123 -j ACCEPT
+        # LAN-only outbound (RFC1918)
+        ip daddr 10.0.0.0/8 accept
+        ip daddr 172.16.0.0/12 accept
+        ip daddr 192.168.0.0/16 accept
 
-      # Drop all other outbound
-      iptables -A OUTPUT -j DROP
+        # DNS to LAN DNS server (adjust IP per deployment)
+        ip daddr 10.0.0.1 udp dport 53 accept
+        ip daddr 10.0.0.1 tcp dport 53 accept
+
+        # NTP to configured time servers
+        udp dport 123 accept
+      }
     '';
   };
 

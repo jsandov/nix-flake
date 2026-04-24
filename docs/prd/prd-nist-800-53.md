@@ -516,7 +516,7 @@ Each admin user must run `google-authenticator` on first login to generate their
 | SC-3 | Security Function Isolation | Host | Audit subsystem runs as root-owned service. Agent sandbox uses separate user/group with systemd isolation directives. Each AI service runs in its own systemd unit with independent sandboxing. |
 | SC-4 | Information in Shared Resources | Host | `PrivateTmp = true` on all service units prevents `/tmp` data leakage between services. `ProtectHome = true` prevents services from reading user home directories. Agent runners use dedicated `ReadWritePaths`. |
 | SC-5 | Denial-of-Service Protection | Host | `networking.firewall` default deny limits exposure. `services.openssh.settings.MaxStartups = "10:30:60"` rate-limits SSH connections. Systemd resource controls: `MemoryMax`, `CPUQuota`, `TasksMax` on agent and AI service units. |
-| SC-7 | Boundary Protection | Host | `networking.firewall.enable = true` with default deny. Only LAN interface exposes services: `networking.firewall.interfaces.<lan>.allowedTCPPorts = [ 22 11434 8000 ]`. No default route to Internet if air-gapped, or strict egress filtering via `networking.firewall.extraCommands` with iptables rules. |
+| SC-7 | Boundary Protection | Host | `networking.firewall.enable = true` with default deny. Only LAN interface exposes services: `networking.firewall.interfaces.<lan>.allowedTCPPorts = [ 22 11434 8000 ]`. No default route to Internet if air-gapped, or strict egress filtering via `networking.nftables.tables.*` (nftables per prd.md Appendix A.2; never `extraCommands` with iptables). |
 | SC-7(3) | Boundary Protection: Access Points | Host | Single LAN interface as sole access point. All other interfaces firewalled with no allowed ports. |
 | SC-7(4) | Boundary Protection: External Telecommunications Services | N/A | Not applicable. LAN-only system. |
 | SC-7(5) | Boundary Protection: Deny by Default / Allow by Exception | Host | `networking.firewall.enable = true` implements default deny. Explicit allowlists per interface. |
@@ -921,16 +921,22 @@ in
   };
 
   # --- AC-4: Information Flow Enforcement (block non-LAN traffic) ---
-  # NOTE: These iptables rules are illustrative. The implementation flake
-  # uses nftables exclusively per prd.md Appendix A.2. Convert these rules
-  # to nftables syntax in the implementation.
-  networking.firewall.extraCommands = ''
-    # Allow only RFC1918 LAN sources on the LAN interface
-    iptables -A INPUT -i ${lanInterface} -s 192.168.0.0/16 -j ACCEPT
-    iptables -A INPUT -i ${lanInterface} -s 10.0.0.0/8 -j ACCEPT
-    iptables -A INPUT -i ${lanInterface} -s 172.16.0.0/12 -j ACCEPT
-    iptables -A INPUT -i ${lanInterface} -j DROP
-  '';
+  # nftables (NixOS 24.11 default, per prd.md Appendix A.2). Never use
+  # `networking.firewall.extraCommands` with iptables — syntax conflicts
+  # with nftables backend produce undefined behaviour. The rules below
+  # filter on the LAN interface to accept only RFC1918 sources.
+  networking.nftables.tables.lan-only = {
+    family = "inet";
+    content = ''
+      chain input-lan {
+        type filter hook input priority 0;
+        iifname "${lanInterface}" ip saddr 192.168.0.0/16 accept
+        iifname "${lanInterface}" ip saddr 10.0.0.0/8 accept
+        iifname "${lanInterface}" ip saddr 172.16.0.0/12 accept
+        iifname "${lanInterface}" drop
+      }
+    '';
+  };
 
   # --- SC-21: DNS ---
   networking.nameservers = [ "192.168.1.1" ];  # LAN DNS; parameterize
@@ -1282,7 +1288,7 @@ Each control area requires specific artifacts for audit. The following table map
 |---|---|---|---|
 | AC-2 (Account Management) | User account listing | `nix eval .#nixosConfigurations.server.config.users.users --json` | Flake repo + runtime `/etc/passwd` |
 | AC-3, AC-6 (Access/Privilege) | Systemd unit configs showing sandboxing | `systemctl show agent-runner.service` | Runtime, exportable via `systemctl show --output=json` |
-| AC-4, SC-7 (Network/Boundary) | Firewall rules dump | `iptables -L -n -v` | On-demand export to `/var/log/evidence/` |
+| AC-4, SC-7 (Network/Boundary) | Firewall rules dump | `nft list ruleset` (nftables is the project backend; iptables command is unavailable on NixOS 24.11+ with nftables) | On-demand export to `/var/log/evidence/` |
 | AU-2, AU-12 (Audit Logging) | Audit log samples | `ausearch -ts today` or `journalctl --since today` | `/var/log/audit/audit.log`, systemd journal |
 | AU-8 (Time Stamps) | NTP sync status | `chronyc tracking` | On-demand |
 | CA-7, SI-7 (Integrity) | AIDE integrity report | `aide --check` output | `/var/log/aide/` (per timer) |
@@ -1312,8 +1318,8 @@ Each control area requires specific artifacts for audit. The following table map
         getent passwd > "$OUTDIR/passwd.txt"
         getent group > "$OUTDIR/group.txt"
 
-        # AC/SC: Firewall rules
-        iptables -L -n -v > "$OUTDIR/iptables.txt" 2>&1
+        # AC/SC: Firewall rules (nftables backend per prd.md Appendix A.2)
+        nft list ruleset > "$OUTDIR/nftables.txt" 2>&1
 
         # AU: Audit rules
         auditctl -l > "$OUTDIR/audit-rules.txt" 2>&1

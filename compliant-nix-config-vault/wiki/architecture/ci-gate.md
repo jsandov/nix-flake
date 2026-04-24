@@ -14,7 +14,9 @@ Every PR triggers `.github/workflows/nix-check.yml`:
 2. **`nix eval --raw .#nixosConfigurations.ai-server.config.system.build.toplevel.drvPath`** — walks the entire module tree end-to-end without realising. This is the primary smoke test (see [[flake-skeleton-pattern#evaluate-without-realising]]).
 3. **`statix check .`** — anti-pattern lint (empty patterns, dead bindings, redundant parentheses).
 4. **`deadnix --fail .`** — unused-binding detector.
-5. **Legacy-FHS-path lint** — `grep -rnE '/(usr/bin|usr/sbin|sbin)/' modules/ hosts/` exits 1 on any hit. Catches [[nixos-gotchas#2-nixos-paths-are-different|the NixOS path gotcha]] before it lands.
+5. **Legacy-FHS-path lint (broad)** — `grep -rnE '/(usr/bin|usr/sbin|sbin)/' modules/ hosts/` exits 1 on any hit. Catches [[nixos-gotchas#2-nixos-paths-are-different|the NixOS path gotcha]] in real config code.
+6. **Legacy-FHS-path lint (narrow, docs)** — `grep -rnE '"-w /(usr/bin|usr/sbin|sbin)/' docs/` catches only the quoted audit-rule syntax in PRDs. Descriptive prose is allowed; broken rules are not. See [[nixos-audit-rule-paths#ci-lint-pattern]].
+7. **Secrets-in-store leakage lint** (ARCH-07) — three heuristic patterns: PEM in `pkgs.writeText`/`builtins.toFile`, 40+ hex chars in the same, literal-value env var with secret-shaped name. Allows canonical `config.sops.secrets.*.path` interpolation. Scope: `modules/` + `hosts/` only.
 
 ## Stack Choices
 

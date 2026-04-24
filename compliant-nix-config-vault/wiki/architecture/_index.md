@@ -8,6 +8,7 @@ System architecture for the compliance-mapped NixOS AI server.
 - [[flake-skeleton-pattern]] — Minimum-viable scaffold so a flake evaluates without real hardware
 - [[ci-gate]] — The CI contract that catches broken Nix before it merges
 - [[prd-snippet-tiers]] — Three-tier convention for Nix snippets across PRDs, modules, and wiki
+- [[meta-module]] — Threat model, data classification, tenancy as typed NixOS options
 - [[nix-implementation-patterns]] — Reusable patterns for module composition and option design
 - [[data-flows]] — How data moves through the inference and agent pipelines
 - [[threat-model]] — Protected assets, adversary model, and scope boundaries

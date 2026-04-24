@@ -8,6 +8,34 @@ Unlike NIST SP 800-53, which offers flexible control descriptions and expects or
 
 This document targets **HITRUST CSF v11** and is structured around the **19 HITRUST control domains** (numbered 00-18). Each domain section maps HITRUST control references to specific NixOS options, runtime controls, or procedural requirements, and specifies implementation level targets for i1 (readiness) and r2 (validated) assessment paths.
 
+### 19-Domain Taxonomy (HITRUST CSF v11)
+
+The domain structure below is the reference taxonomy used throughout the rest of this document:
+
+| # | Domain |
+|---|---|
+| 00 | Information Security Management Program |
+| 01 | Access Control |
+| 02 | Human Resources Security |
+| 03 | Risk Management |
+| 04 | Security Policy |
+| 05 | Organization of Information Security |
+| 06 | Compliance |
+| 07 | Asset Management |
+| 08 | Physical and Environmental Security |
+| 09 | Communications and Operations Management |
+| 10 | Information Systems Acquisition, Development, and Maintenance |
+| 11 | Information Security Incident Management |
+| 12 | Business Continuity and Disaster Recovery |
+| 13 | Privacy Practices |
+| 14 | Audit Logging and Monitoring |
+| 15 | Education, Training, and Awareness |
+| 16 | Third Party Assurance |
+| 17 | Mobile Device Security |
+| 18 | Wireless Security |
+
+> **Source-verification note (AI-14)**: the canonical, authoritative list of CSF v11 domains lives behind the MyCSF portal, which requires a HITRUST subscription. Attempted out-of-band verification via `https://help.hitrustalliance.net` was blocked in this environment; the 19-domain list above was taken from the AI-14 task brief (authoritative within this project) and aligns with the domain numbering that HITRUST assessors reference publicly (CSF v11 i1/r2 scope). The implementation team MUST re-verify against MyCSF before formal assessment kick-off and, if a numbering discrepancy is found, open a follow-up PRD fix before scoping the assessment.
+
 > **MyCSF Traceability Note**: Throughout this document, HITRUST control references use the CSF v11 domain/control numbering scheme. During formal assessment, each technical control should be traced to specific MyCSF requirement statement IDs (format: e.g., "19748v2"). The implementation team should use the MyCSF portal to map these controls to their exact requirement statement IDs once the assessment scope is finalized.
 
 > **Alternate Controls**: Where prescriptive HITRUST requirements cannot be met exactly as specified (e.g., wireless security on a wired-only host), HITRUST uses the term **"alternate controls"** (not "compensating controls," which is PCI DSS terminology). Sections that rely on alternate control justifications are marked accordingly. Alternate control requests must be formally submitted through the MyCSF portal during assessment.
@@ -54,11 +82,12 @@ HITRUST scores each control across five maturity levels. The NixOS flake address
 | **4 - Measured** | Controls are monitored with defined metrics, regular measurement, and reporting to management | Requires: defined KPIs per control, quarterly metric reports, management review evidence, trend analysis over time. Technical hooks: `audit-and-aide` provides raw data, but measurement requires documented metrics program and reporting cadence |
 | **5 - Managed** | Controls are continuously improved based on measurement data over multiple review cycles | Requires: multiple review cycles of measurement data, documented improvement actions driven by metrics, evidence of control optimization over time. This level is NOT achievable in Year 1 for any domain |
 
-**Maturity scoring constraints**:
-- **Year 1 target**: Level 3 (Implemented) for all in-scope domains. Level 3 means controls are deployed and operating as intended.
-- **Year 2 target**: Level 4 (Measured) for priority domains, requiring at least 4 quarters of metric collection, documented management reviews, and trend reporting.
-- **Level 5 (Managed)** requires evidence of continuous improvement driven by measurement data across multiple review cycles. Realistically achievable no earlier than Year 3 for mature domains.
+**Maturity scoring constraints (AI-15 cap)**:
+- **Year 1 target**: **Level 3 (Implemented) is the hard ceiling** for every in-scope domain in this document. Level 3 means controls are deployed, documented, and operating as intended. No Year-1 claim in this PRD — or in any operational evidence package derived from it — may exceed Level 3.
+- **Year 2 target**: Level 4 (Measured) is only reachable after at least 4 quarters of metric collection, documented management reviews, trend reporting, and a formal tuning decision. Year-1 evidence does not support these claims because the measurement history does not yet exist.
+- **Level 5 (Managed)** requires evidence of continuous improvement driven by measurement data across multiple review cycles. Realistically achievable no earlier than Year 3 for mature domains. Claiming Level 5 in a first-year assessment draws immediate assessor pushback and has, historically, been a reason for failed r2 submissions.
 - Having auditd running is Level 3 (Implemented). Having quarterly metric reports with tuning evidence reviewed by management is Level 4 (Measured). Level 5 requires demonstrated improvement actions based on that measurement data over multiple cycles.
+- See [[../residual-risks.md|residual-risks.md]] row 9 for the formal acceptance of this cap as residual risk and AI-15 as the TODO that introduced it.
 
 ---
 
@@ -796,7 +825,9 @@ HITRUST third-party assurance requirements specific to this system:
 | **2** | Physical entry logging; environmental monitoring; equipment maintenance records | Host-level: USBGuard logging, LUKS encryption. Organizational: visitor logs, maintenance records |
 | **3** | Automated physical security integration; comprehensive environmental monitoring | Primarily organizational; host config provides defense-in-depth layers |
 
-This domain is **primarily physical/organizational**. Even for a LAN server in a private environment, HITRUST requires documented physical controls. The NixOS host configuration contributes defense-in-depth measures for the scenario where physical security is bypassed.
+This domain is **primarily physical/organizational**. `config.system.compliance.threatModel.outOfScope` declares `physical-access` as out of scope for infrastructure controls (see `modules/meta/default.nix` and [[../../compliant-nix-config-vault/wiki/architecture/threat-model.md|threat-model.md]]); Domain 08 is therefore mostly about the **organisational compensating controls** (locked room, keyed access, environmental monitoring) that the operator is declaring responsibility for. The NixOS host configuration contributes defense-in-depth measures for the scenario where physical security is bypassed.
+
+> **Cross-reference — live-memory ePHI (residual-risks row 1)**: physical access is the decisive control for the live-memory ePHI risk. Without confidential-computing hardware (AMD SEV-SNP, Intel TDX, or NVIDIA Confidential Computing), an attacker with physical access to a running server can extract ePHI from RAM or GPU VRAM. See [[../residual-risks.md|residual-risks.md]] row 1 for the full acceptance text and AI-04 for the hardware-tier decision. Domain 08's locked-room and keyed-access compensating controls are the main mitigation until that hardware decision is made.
 
 ### NixOS Configuration Mapping (Host-Level Physical Controls)
 
@@ -1485,6 +1516,13 @@ HITRUST prescriptive thresholds for vulnerability/patch management:
 | **2** | Incident classification scheme; defined response timelines; post-incident review process | AIDE anomaly detection feeds incident triage; auditd provides forensic evidence; documented IR plan |
 | **3** | Automated incident detection and escalation; integrated IR workflow; evidence preservation | Real-time auditd alerting; automated evidence collection; preserved audit trails |
 
+### Detection and Escalation Pipeline
+
+1. **Local detection** — `auditd` rules (Domain 09 / Domain 14) + AIDE hourly integrity checks surface security-relevant events into the systemd journal.
+2. **Journal forwarding to SIEM** — `canonical.logRetention.journalForwardToSyslog = true` (see `modules/canonical/default.nix` line 185) makes the journal available to a remote syslog sink. HITRUST Level 3 for this domain requires that event detection reach a central review capability, not just stay on the host; the forward-to-syslog switch is the canonical hook that lets an operator attach a SIEM (e.g., Wazuh, Graylog, Splunk) without changing this module.
+3. **Notification via `notify-admin@` template unit** — the canonical `notify-admin@<tag>.service` template (see `docs/prd/prd.md` §"notify-admin template", canonical A.15) delivers a single escalation primitive used by all detection services. Per canonical, the unit uses systemd specifier `%i`, never shell `$1`. Each detection service calls `systemctl start notify-admin@<event-kind>.service` so routing is centralised.
+4. **On-call procedure** — the human layer (primary/secondary on-call, paging cadence, escalation tree) is documented in `/docs/policies/incident-response-plan.md`. The NixOS host only owns steps 1–3.
+
 ### NixOS Configuration Mapping
 
 ```nix
@@ -1494,10 +1532,13 @@ HITRUST prescriptive thresholds for vulnerability/patch management:
   # (Full AIDE configuration in Domain 09)
 
   # auditd provides security event detection and forensic evidence
-  # (Full auditd configuration in Domain 09)
+  # (Full auditd configuration in Domain 09 / Domain 14)
 
   # Automated security event alerting (incident detection trigger)
-  # (log-alert service configured in Domain 09)
+  # (log-alert service configured in Domain 09; calls notify-admin@<tag>.service)
+
+  # Forward journal to central SIEM
+  # (canonical: logRetention.journalForwardToSyslog = true — see modules/canonical/default.nix)
 
   # Evidence preservation: immutable audit rules prevent log tampering
   # The `-e 2` auditd rule locks audit configuration until reboot
@@ -1577,7 +1618,7 @@ HITRUST prescriptive thresholds for vulnerability/patch management:
 
 ---
 
-## Domain 12: Business Continuity Management
+## Domain 12: Business Continuity and Disaster Recovery
 
 ### HITRUST Control References
 - 12.a Including Information Security in the Business Continuity Management Process
@@ -1604,6 +1645,10 @@ HITRUST prescriptive thresholds for vulnerability/patch management:
   # System generations retained for 90 days (configured in Domain 09)
 
   # BorgBackup for data backup
+  # NOTE on key material: the Borg repokey passphrase is sourced via sops-nix
+  # from the canonical secret `backup/encryption-key` declared in
+  # `modules/secrets/default.nix`. The key never lives in the Nix store or
+  # the Git repo; passCommand reads the runtime-decrypted secret file.
   services.borgbackup.jobs.system-backup = {
     paths = [
       "/var/lib/ollama/models"      # AI model files
@@ -1615,7 +1660,8 @@ HITRUST prescriptive thresholds for vulnerability/patch management:
     repo = "/backup/borg";  # Local backup repository (supplement with off-site)
     encryption = {
       mode = "repokey-blake2";
-      passCommand = "cat /run/secrets/borg-passphrase";
+      # Canonical: modules/secrets/default.nix declares "backup/encryption-key"
+      passCommand = "cat /run/secrets/backup/encryption-key";
     };
     compression = "auto,lzma";
     startAt = "daily";
@@ -1647,6 +1693,13 @@ HITRUST prescriptive thresholds for vulnerability/patch management:
   };
 }
 ```
+
+### Recovery Strategy, RTO/RPO, and Restoration Cadence
+
+- **Backup strategy** — BorgBackup daily with weekly integrity check. Encryption key is the canonical `backup/encryption-key` sops secret (see `modules/secrets/default.nix`). Off-site replication of the Borg repo is a mandatory operational add-on (not covered by the flake itself — see "Required Organizational Processes" below).
+- **RTO/RPO** — declared per asset class in the table below. Assessor evidence is the backup-verify log plus the dated restoration-test record.
+- **Restoration test cadence** — quarterly restoration of a random selected asset to a scratch location, with the procedure and outcome recorded under `/var/lib/hitrust-evidence/restoration-tests/<date>/`. A full bare-metal rebuild drill is run at least annually against a throwaway VM.
+- **HIPAA alignment** — HIPAA §164.308(a)(7) (Contingency Plan) and §164.310(a)(2)(i) (Contingency Operations) share evidence with this domain. See `docs/prd/prd-hipaa.md` for the HIPAA-side treatment; HITRUST Domain 12 is the single source of truth for RTO/RPO numbers in this project.
 
 ### Recovery Targets
 
@@ -1715,6 +1768,23 @@ HITRUST prescriptive thresholds for vulnerability/patch management:
 | **3** | Automated privacy controls; continuous privacy monitoring | Agent sandbox prevents unauthorized data access; audit logging tracks data access patterns |
 
 This domain is **critical if the AI system processes personal data** (e.g., user prompts containing PII, inference outputs that reference individuals). Even if the system is intended for non-personal data processing, privacy practices must be documented.
+
+### HIPAA Privacy Rule Alignment
+
+Where the system processes ePHI, HIPAA's Privacy Rule controls (§164.520 Notice of Privacy Practices, §164.522 Right to Request Privacy Protection, §164.524 Individual Right of Access, §164.526 Amendment, §164.528 Accounting of Disclosures) are the primary regulatory ancestor for Domain 13. See [[./prd-hipaa.md|prd-hipaa.md]] for the HIPAA-specific treatment; this domain lifts those requirements into HITRUST's broader privacy framing and adds non-healthcare PII coverage.
+
+Specifically:
+
+- **Right of access (§164.524)** — if an individual's prompt or output contains PII that was logged, the organisation must be able to produce that record on request. The agent-sandbox audit rules (Domain 09/14) make every prompt and completion traceable to a user + timestamp tuple; extraction is a scripted query against the retained journal.
+- **Right to amendment / deletion** — requires a documented process (outside the flake) that describes how the operator purges specific records from `/var/lib/agent-runner/` and from the journal. Note: the immutable audit-rule flag (`-e 2`) protects audit evidence; purging ePHI from the journal for privacy rights is a structured operator action, logged under its own audit category.
+- **Accounting of disclosures (§164.528)** — any external inference call (e.g., to a remote model provider) would constitute a disclosure. This system targets fully local inference, so external disclosures are scoped out; this scoping must be stated in the Notice of Privacy Practices and re-verified if RAG sources or model providers change.
+
+### Data Minimisation and Retention
+
+- **Data minimisation** — agent sandboxing (`ReadOnlyPaths`, `PrivateTmp=true`, per-service UID) is the infrastructure-layer enforcement. Prompt-template-level minimisation (stripping PII before the model sees it) is an application-layer control and is covered in [[./prd-ai-governance.md|prd-ai-governance.md]].
+- **Retention for AI decision logs** — canonical `logRetention.aiDecisionLogs = "18month"` (see `modules/canonical/default.nix` line 187 and `docs/resolved-settings.yaml`). This is the single retention value for any log that records AI decisions touching personal data.
+- **General journal retention** — canonical `logRetention.journalMaxRetention = "365day"` bounds the systemd journal; privacy-sensitive event categories inherit this unless explicitly longer-retained under AI-decision-log policy.
+- **Right-to-deletion in practice** — deletion of a specific individual's records requires (a) identifying the record via the audit trail, (b) purging the matching journal entries and agent artifacts, (c) logging the purge itself to the audit trail, and (d) documenting the request and action in the DSR response record. This is an operator runbook task, not a flake config; the infrastructure just guarantees the records are findable and scoped.
 
 ### NixOS Configuration Mapping (Technical Privacy Controls)
 
@@ -1785,11 +1855,294 @@ This domain is **critical if the AI system processes personal data** (e.g., user
 
 ---
 
-## Domains 14-18: Additional HITRUST Domains
+## Domain 14: Audit Logging and Monitoring
 
-> **Note**: HITRUST CSF v11 domains 14-18 address specialized areas that may or may not apply depending on assessment scope. Domain 14 (Endpoint Protection) is largely covered by Domain 09 controls (09.j-09.k). The controls below are organized by their HITRUST domain number for completeness but may overlap with controls already documented in earlier domains.
+### HITRUST Control References
+- 14.a Audit Logging
+- 14.b Monitoring System Use
+- 14.c Protection of Log Information
+- 14.d Administrator and Operator Logs
+- 14.e Fault Logging
+- 14.f Clock Synchronisation
 
-For this LAN-only AI inference server, Domains 14-18 are addressed through controls already documented in Domains 00-13. During formal MyCSF assessment, map specific requirement statements from these domains to the technical implementations documented in the relevant earlier domain sections.
+### Implementation Level Targets
+
+| Level | Requirement | NixOS Implementation |
+|---|---|---|
+| **1** | Audit logging enabled; logs retained per policy; log access restricted | auditd + journald; root-only log access; `MaxRetentionSec=365day` via canonical |
+| **2** | Centralised log collection; tamper detection; 1-year retention; daily log review | `canonical.logRetention.journalForwardToSyslog = true`; append-only storage; 365-day retention; hourly `log-alert` scan |
+| **3** | Real-time SIEM integration; automated anomaly detection; long-term retention for regulated data | External SIEM attached to syslog forward; 18-month retention for AI decision logs per canonical |
+
+### Relationship to Other Domains
+
+Domain 14 is the **single source of truth for audit-logging controls** in this PRD. The auditd rules, journald retention configuration, and log-review automation are authored in Domain 09 (Communications and Operations Management) because that is where the large shared Nix code block lives. Domain 14 references that code rather than duplicating it; its purpose is to surface the audit-logging requirement as its own HITRUST scoring unit and to tie it to the canonical retention values.
+
+```nix
+# Audit logging — see Domain 09, §"09.aa-09.af Audit Logging and Monitoring"
+# for the full auditd + journald + chrony block. Canonical retention values
+# driven from modules/canonical/default.nix:
+#   logRetention.journalMaxRetention  = "365day"
+#   logRetention.journalMaxUse        = "10G"
+#   logRetention.journalForwardToSyslog = true
+#   logRetention.aiDecisionLogs       = "18month"   # regulated retention
+```
+
+### HITRUST Prescriptive Thresholds
+
+| Requirement | HITRUST | Canonical / Implementation |
+|---|---|---|
+| Events captured | Authentication, authorisation, config changes, data access, time changes, privileged actions | auditd rules in Domain 09 |
+| Log retention | 90 days (L1), 1 year (L2), 6 years (L3 regulated) | `canonical.logRetention.journalMaxRetention = "365day"`; `aiDecisionLogs = "18month"` for ePHI-adjacent logs |
+| Log protection | Non-root read-only; integrity verification | `0700` perms; `-e 2` immutable audit config |
+| Clock sync | Authoritative time; 1-second accuracy | chrony `maxdistance 1.0` |
+| Log review | Daily (L2), real-time (L3) | Hourly `log-alert` service; journal forward to SIEM |
+
+### Evidence Artifacts
+- `auditctl -l` output proving rules are active
+- Sample audit events per monitored category
+- `journalctl --disk-usage` output showing within-retention utilisation
+- SIEM ingestion confirmation (sample event round-trip) where a SIEM is attached
+- Clock sync status (`chronyc tracking`)
+
+### Cross-References
+- NIST SP 800-53: AU-2 through AU-12 (Audit family)
+- HIPAA: §164.312(b) Audit Controls
+- PCI DSS v4.0: Requirement 10 (Log and Monitor All Access)
+- ISO 27001: A.12.4 (Logging and monitoring)
+
+---
+
+## Domain 15: Education, Training, and Awareness
+
+### HITRUST Control References
+- 15.a Information Security Awareness, Education, and Training
+- 15.b Role-based Security Training
+- 15.c Training Records and Effectiveness Measurement
+
+### Implementation Level Targets
+
+| Level | Requirement | NixOS Implementation |
+|---|---|---|
+| **1** | Security awareness training provided at least annually | Login banner + MOTD reinforcement; training program documented |
+| **2** | Role-based training; training completed before system access; completion records retained | Training scheduled as part of account-provisioning Git workflow; SSH authorized_keys addition gated on training record |
+| **3** | Training effectiveness measured; program updated based on measurement | Requires procedure and measurement cadence outside the flake |
+
+Domain 15 is **primarily organisational**. The NixOS host contributes only continuous-reinforcement mechanisms (banners, MOTD). The substantive training, tracking, and effectiveness measurement live in HR processes. See Domain 02 (Human Resources Security) for the personnel-lifecycle anchor and the `services.openssh.banner` / MOTD snippet that serves as on-host reinforcement.
+
+### Reinforcement Mechanisms (Cross-Reference to Domain 02)
+
+The SSH banner, `/etc/motd`, and console `/etc/issue` text defined in Domain 02 are the on-host awareness reinforcement surface for Domain 15. They are deliberately authored once in Domain 02 to avoid duplication.
+
+```nix
+# Awareness reinforcement lives in Domain 02 — see §"02.a-02.e" for the
+# services.openssh.banner / environment.etc."motd" / environment.etc."issue"
+# block. Content explicitly references annual training obligations so the
+# reinforcement supports Domain 15 scoring.
+```
+
+### Role-Based Training Matrix (Operator Responsibility)
+
+| Role | Training Topic | Cadence |
+|---|---|---|
+| System administrator | NixOS rebuild/rollback, audit-log review, incident evidence collection | Annually + on module change |
+| AI operator | Prompt injection awareness, model provenance discipline, data handling for PII/ePHI | Annually + on model change |
+| All users | Security awareness baseline (phishing, credentials, reporting channel) | Annually |
+
+### Required Organizational Processes (Outside Flake)
+- Annual security awareness training curriculum
+- Role-specific training materials (see matrix above)
+- Completion records per user, per cycle, retained for 3 years minimum
+- Acknowledgement forms tying training completion to system-access grant
+- Periodic effectiveness measurement (phishing simulations, quiz pass rates) with trend reporting
+
+### Evidence Artifacts
+- Training completion records with dates
+- Role-based training curriculum documents
+- Banner/MOTD config output (from Domain 02) showing awareness text
+- Acknowledgement forms signed and retained
+- Effectiveness-measurement results (if Level 3 pursued in a future year)
+
+### Cross-References
+- NIST SP 800-53: AT-1, AT-2, AT-3
+- HIPAA: §164.308(a)(5) Security Awareness and Training
+- PCI DSS v4.0: Requirement 12.6 (Security awareness program)
+- ISO 27001: A.7.2.2 (Information security awareness, education, and training)
+
+---
+
+## Domain 16: Third Party Assurance
+
+### HITRUST Control References
+- 16.a Identification of Risks Related to External Parties
+- 16.b Addressing Security When Dealing with Customers
+- 16.c Addressing Security in Third Party Agreements
+- 16.d Third Party Monitoring and Review
+- 16.e Supply Chain Security
+
+### Implementation Level Targets
+
+| Level | Requirement | NixOS Implementation |
+|---|---|---|
+| **1** | Third parties identified; security requirements documented | `flake.lock` as cryptographic SBOM of all third-party code; documented vendor list |
+| **2** | Contractual security requirements; third-party monitoring | BAAs/DPAs for model providers (if any); `require-sigs = true`; pinned substituters |
+| **3** | Automated third-party monitoring; continuous supply-chain verification | Automated `flake.lock` diff review; model integrity checks; SBOM export |
+
+### NixOS Configuration Mapping
+
+```nix
+# Third-party assurance — see Domain 05 §"NixOS Configuration Mapping
+# (Third-Party Assurance)" for the full nix.settings (substituters,
+# trusted-public-keys, require-sigs) and model-integrity-check block.
+#
+# Domain 16 surfaces the same controls under the HITRUST supply-chain
+# scoring lens. The authoritative declarations live once in Domain 05.
+```
+
+### Third-Party Inventory (System-Specific)
+
+| Third Party | Category | Verification Mechanism | Cross-ref |
+|---|---|---|---|
+| Nixpkgs | Software supply chain | `flake.lock` SHA-256; signed binary cache; `require-sigs = true` | Domain 05, Domain 10 |
+| NVIDIA drivers | Proprietary hardware drivers | Hash-locked Nix derivation | Domain 05 |
+| Ollama | AI inference runtime | Pinned flake input; binary hash verification | Domain 05, Domain 10 |
+| AI model artifacts | Trained model files | SHA-256 manifest; daily integrity check; [[../residual-risks.md|residual-risks row 3]] for trust-on-first-download residual | Domain 05, Domain 10 |
+| NTP sources | Time synchronisation | Multi-source chrony consensus | Domain 09 (09.af), Domain 14 |
+| sops-nix age recipients | Secrets management | age recipient key fingerprints committed to Git | `modules/secrets/default.nix` |
+
+### Required Organizational Processes
+- Vendor risk assessment per third party with residual-risk rating
+- Contractual security clauses (BAA for HIPAA-covered providers, DPA for GDPR-scope providers, general confidentiality + vulnerability-disclosure for all)
+- Annual vendor review with documented outcome (renew / remediate / terminate)
+- Breach-notification-from-vendor playbook tied to Domain 11
+
+### Evidence Artifacts
+- `flake.lock` snapshot
+- `nix flake metadata` provenance output
+- Model checksum manifest and daily integrity check logs (Domain 05)
+- Vendor risk assessment documents
+- Contracts, BAAs, DPAs on file
+- Annual vendor review records
+
+### Cross-References
+- NIST SP 800-53: SA-9, SR-3, SR-4, SR-6
+- HIPAA: §164.308(b)(1) Business Associate Contracts
+- PCI DSS v4.0: Requirement 12.8 (Service provider management)
+- ISO 27001: A.15.1 and A.15.2 (Supplier relationships)
+
+---
+
+## Domain 17: Mobile Device Security
+
+### HITRUST Control References
+- 17.a Mobile Computing and Communications
+- 17.b Teleworking
+- 17.c Mobile Device Policy
+- 17.d Bring-Your-Own-Device (BYOD)
+
+### Applicability and Scoping
+
+Domain 17 is **largely N/A for the server itself**. This system is a stationary LAN-only GPU inference server — it is not a mobile device, is not carried, and has no teleworking surface. However, Domain 17 still requires documented controls because **the server's clients may be mobile devices** (operator laptops, tablets) and because HITRUST expects an explicit scoping statement rather than silence.
+
+### Implementation Level Targets
+
+| Level | Requirement | NixOS Implementation |
+|---|---|---|
+| **1** | Mobile device policy exists; scope covers all devices touching the system | Organisational policy documents BYOD and admin-workstation requirements |
+| **2** | Mobile endpoints meet minimum security baseline before system access | LAN-only firewall means mobile endpoints must authenticate via SSH keys; no remote/VPN surface |
+| **3** | Automated enforcement of mobile-endpoint posture (MDM) | Out of scope for the server; lives in the operator's MDM |
+
+### Server-Side Compensating Controls
+
+The server cannot enforce endpoint posture on client devices, but it can limit the blast radius from a compromised mobile client:
+
+```nix
+# Mobile-facing defence-in-depth (all already authored in earlier domains):
+# - Firewall: LAN-only interface binding (Domain 09). A stolen/rooted mobile
+#   device must be on the trusted LAN to reach any service.
+# - Authentication: SSH key-only, no password auth (Domain 01). A stolen
+#   device cannot brute-force a credential.
+# - Session timeout: TMOUT=900 and ClientAliveInterval (Domain 01). An
+#   abandoned mobile session disconnects.
+# - MFA path (Domain 01): TOTP via google-authenticator for wheel users,
+#   gated on the canonical TOTP seed secret (modules/secrets/default.nix).
+```
+
+### Alternate Control Statement (MyCSF Submission)
+
+Prescriptive mobile-device controls (MDM-enforced, device-level encryption, remote wipe) are **not applicable at the server tier** because the server is stationary and has no mobile form factor. Alternate controls:
+- Strict network boundary (LAN-only) gates the blast radius from any client.
+- Key-only SSH authentication means client compromise alone is insufficient for server access.
+- Short session timeouts bound exposure on client loss.
+
+Organisational mobile-device policy (workstation MDM, disk encryption, lost-device procedure) applies to the operator's endpoints and is documented in `/docs/policies/mobile-device-policy.md`, NOT in this flake.
+
+### Evidence Artifacts
+- Scoping statement explaining server vs. client responsibilities
+- Organisational mobile-device policy (client-side)
+- Firewall configuration proving LAN-only (Domain 09)
+- SSH configuration proving key-only auth (Domain 01)
+- Session-timeout configuration (Domain 01)
+
+### Cross-References
+- NIST SP 800-53: AC-19 (Access Control for Mobile Devices), AC-20 (External Systems)
+- HIPAA: §164.310(b) Workstation Use (endpoint-side)
+- PCI DSS v4.0: Requirement 1 (Network boundaries)
+- ISO 27001: A.6.2 (Mobile devices and teleworking)
+
+---
+
+## Domain 18: Wireless Security
+
+### HITRUST Control References
+- 18.a Wireless Access Control
+- 18.b Wireless Network Monitoring
+- 18.c Rogue Wireless Detection
+- 18.d Wireless Cryptography
+
+### Applicability and Scoping
+
+Domain 18 is **N/A for this system**. The server uses wired Ethernet exclusively. No wireless radio is present or enabled on the host. However, HITRUST expects explicit scoping + alternate-control documentation rather than silent omission.
+
+### Defence-in-Depth Wireless Disablement
+
+```nix
+# Wireless disablement — canonical kernel blacklist lives in
+# prd.md Appendix A.10 and modules/canonical/default.nix. The list below
+# is illustrative; the authoritative Nix block is in stig-baseline.
+{
+  networking.wireless.enable = false;
+
+  # Blacklist wireless kernel modules (defence-in-depth; the authoritative
+  # list is the canonical one)
+  boot.blacklistedKernelModules = [
+    "iwlwifi" "iwlmvm" "iwldvm"   # Intel wireless
+    "ath9k" "ath10k" "ath11k"      # Atheros/Qualcomm wireless
+    "brcmfmac" "brcmsmac"          # Broadcom wireless
+    "rtw88" "rtw89"                # Realtek wireless
+    "mt76" "mt7921e"               # MediaTek wireless
+  ];
+}
+```
+
+### Alternate Control Statement (MyCSF Submission)
+
+Prescriptive wireless controls (WPA3/Enterprise, 802.1X, wireless IDS, rogue-AP scanning) are **not applicable to the server** because no wireless interface exists. Alternate controls:
+- Wireless stack disabled at the OS layer (`networking.wireless.enable = false`).
+- Wireless kernel modules blacklisted (defence-in-depth; prevents a rogue USB wireless adapter from auto-loading).
+- USB device policy (Domain 08, USBGuard) rejects unknown class-08 (storage) and unmanaged interfaces, which catches USB wireless adapters by default rule.
+- LAN infrastructure controls (WPA3/Enterprise on the surrounding network, rogue-AP scanning) are the organisation's responsibility and are documented in `/docs/policies/wireless-policy.md`, not in this host's flake.
+
+### Evidence Artifacts
+- Scoping statement for MyCSF
+- `ip link show` output confirming no wireless interfaces
+- Kernel module blacklist evidence
+- USBGuard policy
+- Alternate control request submission record
+
+### Cross-References
+- NIST SP 800-53: AC-18 (Wireless Access)
+- PCI DSS v4.0: Requirement 2.1.1 (Wireless security — N/A for this system's surface)
+- ISO 27001: A.13.1 (Network security management)
 
 ---
 
@@ -1892,6 +2245,11 @@ The flake can include a systemd service that generates assessment evidence artif
 | 11. Incident Management | auditd config, log-alert service, evidence collector | IR plan, classification scheme, post-incident review records |
 | 12. Business Continuity | BorgBackup logs, backup verification, generations list | BCP document, continuity test records, RTO/RPO definitions |
 | 13. Privacy Practices | Agent sandbox config, data access audit trails, retention config | Privacy policy, PIA, data subject rights procedures, DPAs |
+| 14. Audit Logging and Monitoring | auditd rules, journald retention, chrony tracking, log-alert timer | Log-review runbook, SIEM ingestion confirmation, tuning decisions |
+| 15. Education, Training, and Awareness | SSH banner, MOTD, `/etc/issue` | Training curriculum, completion records, effectiveness measurement |
+| 16. Third Party Assurance | `flake.lock`, model checksums, signed-cache config, `nix flake metadata` | Vendor assessments, BAAs/DPAs, annual review records |
+| 17. Mobile Device Security | LAN-only firewall config, SSH key-only auth, session-timeout config | Client-side MDM policy, lost-device procedure |
+| 18. Wireless Security | `ip link show` output, kernel module blacklist, USBGuard policy | Alternate control request record |
 
 ---
 
@@ -1963,8 +2321,13 @@ HITRUST CSF v11 incorporates NIST and HIPAA requirements but adds prescriptive s
 | 11. Incident Management | 3 (Implemented) | Detection controls deployed; IR plan documented; evidence collection automated |
 | 12. Business Continuity | 3 (Implemented) | BorgBackup operational; NixOS rollback available; RTO/RPO defined |
 | 13. Privacy Practices | 3 (Implemented) | Privacy controls documented; data access restrictions enforced |
-| Wireless Security (09.m subset) | N/A | Scoped out -- no wireless interfaces; alternate control documented |
-| Mobile Device (01.x-01.y subset) | N/A | Scoped out -- LAN-only server; alternate control documented |
+| 14. Audit Logging and Monitoring | 3 (Implemented) | auditd + journald + retention canonicals + hourly log-alert deployed and operating |
+| 15. Education, Training, and Awareness | 2 (Procedure) | Training program documented; full operational rollout with completion records pending |
+| 16. Third Party Assurance | 3 (Implemented) | `flake.lock` SBOM, signed-cache policy, model integrity check deployed |
+| 17. Mobile Device Security | N/A (server); 3 on client side where applicable | Server is stationary; LAN-only firewall + SSH key-only auth serve as compensating controls |
+| 18. Wireless Security | N/A | Scoped out -- no wireless interfaces; alternate control documented |
+
+> **AI-15 cap**: every entry above is at Level 3 or below. No Year-1 target in this PRD exceeds Level 3; N/A is used only where a domain does not technically apply and alternate-control documentation is provided.
 
 ### Year 2 Progression Targets (r2 Readiness)
 
@@ -1984,6 +2347,11 @@ HITRUST CSF v11 incorporates NIST and HIPAA requirements but adds prescriptive s
 | 11. Incident Management | 4 (Measured) | Incident metrics (MTTR, volume, categories); post-incident review evidence |
 | 12. Business Continuity | 4 (Measured) | Backup success rate metrics; restoration test results; continuity test outcomes |
 | 13. Privacy Practices | 3 (Implemented) | Maintain current; PIA completed if processing personal data |
+| 14. Audit Logging and Monitoring | 4 (Measured) | 4 quarters of log-review metrics; SIEM ingestion rate; tuning actions documented |
+| 15. Education, Training, and Awareness | 3 (Implemented) | Full training program operational with completion records for all users |
+| 16. Third Party Assurance | 3 (Implemented) | Maintain current; annual vendor review cycle completed |
+| 17. Mobile Device Security | N/A (server) / 3 (client) | Client-side MDM and policy operational; server scoping re-stated |
+| 18. Wireless Security | N/A | Re-state scoping; no change expected |
 
 > **Level 5 (Managed)** is not targeted in Year 2. Achieving Level 5 requires evidence of continuous improvement driven by measurement data over multiple review cycles, which realistically requires Year 3 or later for any domain.
 
@@ -2002,11 +2370,15 @@ HITRUST CSF v11 incorporates NIST and HIPAA requirements but adds prescriptive s
   - [ ] Information Security Policy (Domain 04)
   - [ ] Risk Register and Risk Assessment (Domain 03)
   - [ ] Incident Response Plan (Domain 11)
-  - [ ] Business Continuity Plan (Domain 12)
+  - [ ] Business Continuity Plan with RTO/RPO (Domain 12)
   - [ ] Privacy Policy and PIA (Domain 13)
   - [ ] Physical Security Documentation (Domain 08)
   - [ ] Asset Inventory and Classification (Domain 07)
   - [ ] HR Security Procedures (Domain 02)
+  - [ ] Security Awareness & Training Curriculum (Domain 15)
+  - [ ] Third-Party / Vendor Management Policy (Domain 16)
+  - [ ] Mobile Device / BYOD Policy (Domain 17)
+  - [ ] Wireless Alternate Control Request (Domain 18)
 - [ ] Conduct internal gap assessment using HITRUST MyCSF tool
 - [ ] Map technical controls to MyCSF requirement statement IDs (format: e.g., "19748v2")
 - [ ] Review current HITRUST Threat Catalogue for i1 assessment applicability
@@ -2053,7 +2425,11 @@ HITRUST CSF v11 incorporates NIST and HIPAA requirements but adds prescriptive s
 | 11. Incident Management | 11.a-11.e | audit-and-aide + organizational |
 | 12. Business Continuity | 12.a-12.e | BorgBackup + NixOS generations |
 | 13. Privacy Practices | 13.a-13.k | agent-sandbox + organizational |
-| 14-18. Additional Domains | (varies) | Covered by Domains 00-13 controls |
+| 14. Audit Logging and Monitoring | 14.a-14.f | audit-and-aide (references Domain 09 Nix) |
+| 15. Education, Training, and Awareness | 15.a-15.c | stig-baseline banners + organizational |
+| 16. Third Party Assurance | 16.a-16.e | Flake inputs + ai-services model integrity |
+| 17. Mobile Device Security | 17.a-17.d | N/A at server tier; client-side organizational policy |
+| 18. Wireless Security | 18.a-18.d | N/A — wireless stack disabled; alternate control documented |
 
 ## Appendix B: Cross-Framework Reference Matrix
 
@@ -2073,3 +2449,8 @@ HITRUST CSF v11 incorporates NIST and HIPAA requirements but adds prescriptive s
 | 11. Incident Management | IR-1 through IR-10, AU-6 | 164.308(a)(6), 164.404-164.410 | 12.10 | A.16.1 |
 | 12. Business Continuity | CP-1 through CP-13 | 164.308(a)(7), 164.310(a)(2)(i) | 12.10.2 | A.17.1-A.17.2 |
 | 13. Privacy Practices | SI-12, PT-1 through PT-8 | 164.520-164.528 | 3, 7 | A.18.1.4, ISO 27701 |
+| 14. Audit Logging and Monitoring | AU-2 through AU-12 | 164.312(b) | 10 | A.12.4 |
+| 15. Education, Training, and Awareness | AT-1, AT-2, AT-3 | 164.308(a)(5) | 12.6 | A.7.2.2 |
+| 16. Third Party Assurance | SA-9, SR-3, SR-4, SR-6 | 164.308(b)(1) | 12.8 | A.15.1-A.15.2 |
+| 17. Mobile Device Security | AC-19, AC-20 | 164.310(b) | 1 | A.6.2 |
+| 18. Wireless Security | AC-18 | — | 2.1.1 | A.13.1 |

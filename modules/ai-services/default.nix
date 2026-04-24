@@ -1,4 +1,4 @@
-{ ... }:
+_:
 {
   # ai-services — Ollama bound to 127.0.0.1:11434, LAN access via Nginx
   # TLS reverse proxy only. Model registry with provenance, per-client

@@ -1,4 +1,4 @@
-{ ... }:
+_:
 {
   # lan-only-network — default-deny firewall, per-UID egress, DNS/NTP
   # restrictions. nftables only (NixOS 24.11 default) — never iptables

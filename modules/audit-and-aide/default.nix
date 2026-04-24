@@ -1,4 +1,4 @@
-{ ... }:
+_:
 {
   # audit-and-aide — auditd kernel events + journald persistence, AIDE
   # file integrity with hourly checks, drift alerting, evidence generation.

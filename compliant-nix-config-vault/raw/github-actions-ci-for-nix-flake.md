@@ -8,10 +8,48 @@ The research agent that gathered these findings had `WebFetch` and `WebSearch` d
 
 ## Post-CI-run update (2026-04-24)
 
-First live CI run (PR #20) confirmed two real issues with the recommended stack:
+First several live CI runs on PR #20 each surfaced a distinct hidden issue. Capturing the iteration sequence rather than mass-fixing because it is exactly the "broken Nix discovered one layer at a time" pattern MASTER-REVIEW Systemic Issue #2 predicted.
 
-1. **`DeterminateSystems/magic-nix-cache-action` now requires FlakeHub authentication.** The runner log reported `Unable to authenticate to FlakeHub. Individuals must register at FlakeHub.com; Organizations must create an organization at FlakeHub.com.` This is the supply-chain-drift risk the research already flagged — the DeterminateSystems stack has collapsed magic-nix-cache into their FlakeHub-gated product line. The skeleton CI reverted to `cachix/install-nix-action@v27` with no cache layer; the ai-server skeleton eval is fast enough that caching is noise. When caching becomes necessary, the better target is `nix-community/cache-nix-action@v6` (wraps `actions/cache`) rather than any DeterminateSystems-hosted substituter.
-2. **`checks.<system>.eval = drvPath`** (a string) is rejected by `nix flake check` with `"Flake output 'checks.x86_64-linux.eval' is not a derivation."` `nix flake check` requires `checks.*` to be real derivations. Because the CI workflow already runs a separate `nix eval` step that walks the toplevel, the `checks.eval` output was redundant and was removed. If we want a flake-native eval check later, the idiom is `checks.eval = pkgs.runCommand "eval-check" {} "touch $out"` with the toplevel drvPath referenced in the builder env — but the external `nix eval` step is simpler and surfaces trace lines to the PR annotation surface.
+### Iteration 1 — DeterminateSystems stack requires FlakeHub auth
+
+`DeterminateSystems/magic-nix-cache-action` failed with `Unable to authenticate to FlakeHub. Individuals must register at FlakeHub.com; Organizations must create an organization at FlakeHub.com.` The magic cache has collapsed into the FlakeHub-gated product line. This is the supply-chain drift the research already flagged — `@main` pins are exactly how you find out.
+
+**Fix:** reverted installer to `cachix/install-nix-action@v27`, dropped the cache layer entirely. Skeleton eval is fast enough that caching is noise. When caching becomes necessary later, prefer `nix-community/cache-nix-action@v6` (wraps `actions/cache`) over any DeterminateSystems-hosted substituter.
+
+### Iteration 2 — `checks.<system>.eval = drvPath` is rejected
+
+`nix flake check` returned `"Flake output 'checks.x86_64-linux.eval' is not a derivation."` Our `checks.eval` exposed a `drvPath` string, but `nix flake check` insists on derivations.
+
+**Fix:** removed the `checks.eval` output entirely. The CI workflow already runs a separate `nix eval .#nixosConfigurations.*.config.system.build.toplevel.drvPath` step that walks the module tree, so the flake-native check was redundant. If a flake-native version is wanted later, the idiom is:
+
+```nix
+checks.${system}.eval =
+  pkgs.runCommand "eval-check" { } ''
+    echo ${self.nixosConfigurations.ai-server.config.system.build.toplevel.drvPath} > $out
+  '';
+```
+
+Wrapping the drvPath inside a `runCommand` gives `nix flake check` a real derivation while still not realising the toplevel. Skipping for now — the external `nix eval` step surfaces trace lines to the PR annotation surface more directly.
+
+### Iteration 3 — statix `pattern-empty` vs forward-compatible stubs
+
+`statix check .` failed with `This pattern is empty, use _ instead` on every module stub. The stubs were written as `{ ... }:` — a deliberate convention so later edits can add `config`, `lib`, `pkgs` args without diff noise in the pattern line. statix disagrees: if no args are consumed, use `_:`.
+
+**Fix:** changed all six module stubs to `_:`. The "forward-compatible pattern" convention loses to the linter because the linter runs on every CI pass. When a future edit needs an arg, the `_:` → `{ lib, ... }:` diff is one line anyway.
+
+**Connection to compliance:** this tradeoff is an instance of the broader ARCH-16 boundary-lints principle — a strict lint beats a human convention every time, because the lint survives people.
+
+### Iteration 4 — unused `self` in `outputs`
+
+`deadnix --fail .` flagged `self` as unused in `outputs = { self, nixpkgs, ... }: ...`. Same rule: if the binder is not read, drop it.
+
+**Fix:** `outputs = { nixpkgs, ... }:`. Add `self` back when a reference is genuinely needed (e.g., when `checks.*` references `self.nixosConfigurations.*`).
+
+### Meta-lesson
+
+CI bring-up for a NixOS flake is an iterative reveal — each passing step uncovers the next hidden issue. The skeleton PR is a useful forcing function because every broken Nix snippet in the PRDs will surface the same way when it lands in a module. Plan on ≥3 CI iterations for any non-trivial module PR; time-box accordingly.
+
+The pattern reinforces why ARCH-03 is a P0 prerequisite for the rest of the roadmap. Without it, every subsequent module PR would compound unvalidated errors.
 
 ## Verdict
 

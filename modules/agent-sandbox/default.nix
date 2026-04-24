@@ -1,4 +1,4 @@
-{ ... }:
+_:
 {
   # agent-sandbox — systemd isolation for AI agents: PrivateTmp,
   # ProtectSystem=strict, NoNewPrivileges, seccomp, per-agent UID,

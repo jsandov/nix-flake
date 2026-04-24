@@ -1,4 +1,4 @@
-{ ... }:
+_:
 {
   # gpu-node — NVIDIA/CUDA driver provisioning and GPU-specific controls.
   #

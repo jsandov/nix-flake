@@ -1,4 +1,4 @@
-{ ... }:
+_:
 {
   # stig-baseline — OS foundation: kernel hardening, SSH lockdown, PAM,
   # account policies, boot integrity, service minimization.

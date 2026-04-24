@@ -25,7 +25,21 @@
   #   - SSH host keys / LUKS passphrases / TOTP seeds / backup keys: on compromise
   #   - API tokens: quarterly
 
-  sops = {
+  options.secrets.rotationDays = lib.mkOption {
+    type = lib.types.attrsOf lib.types.ints.positive;
+    description = "Rotation cadence in days for each secret category. Zero means 'on compromise only'.";
+    default = {
+      tls = 90;
+      ssh = 0;
+      luks = 0;
+      api = 90;
+      totp = 0;
+      backup = 0;
+      syslog = 90;
+    };
+  };
+
+  config.sops = {
     # Path to the encrypted secrets file relative to this module. The
     # placeholder at /secrets/secrets.enc.yaml lets eval succeed; real
     # deployments replace its body with sops-encrypted content.
@@ -130,22 +144,6 @@
         group = "syslog";
         mode = "0400";
       };
-    };
-  };
-
-  # Make the rotation cadence surfaceable to evidence-generation (ARCH-10).
-  # Not a sops-nix option — a local convention that ARCH-10 will read.
-  options.secrets.rotationDays = lib.mkOption {
-    type = lib.types.attrsOf lib.types.ints.positive;
-    description = "Rotation cadence in days for each secret category. Zero means 'on compromise only'.";
-    default = {
-      tls = 90;
-      ssh = 0;
-      luks = 0;
-      api = 90;
-      totp = 0;
-      backup = 0;
-      syslog = 90;
     };
   };
 }

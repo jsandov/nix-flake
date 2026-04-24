@@ -67,6 +67,7 @@ The choice to expose this as `options.secrets.*` rather than `options.canonical.
 - **`age.keyFile` is a string path**, not a Nix path literal. It doesn't need to exist at eval; sops reads it at activation. That difference matters — if it were a Nix path, we'd need a placeholder for it too.
 - **Secret `path` overrides** are strings, not Nix paths. Same reasoning: sops-nix materialises them at activation, not at eval.
 - **`inputs.nixpkgs.follows = "nixpkgs"` on sops-nix** keeps the dependency graph clean — otherwise sops-nix pulls its own nixpkgs and `flake.lock` gets two versions. Always use `follows`.
+- **Mixing top-level `sops = { ... }` with `options.secrets.* = ...`** fails with "has an unsupported attribute `sops`. This is caused by introducing a top-level `config' or `options' attribute." Once a module uses `options.*` explicitly, every config assignment must live under `config = { ... };`. Caught on first CI run; fixed by wrapping sops settings in `config.sops = { ... }`. The module-system rule is: top-level attrs are implicit config *only if you never use explicit `options`*; the moment you do, everything has to be under one or the other.
 
 ## Suggested wiki compile targets
 

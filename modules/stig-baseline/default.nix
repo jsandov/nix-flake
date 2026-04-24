@@ -83,18 +83,13 @@ in
       # Headless — no GUI
       services.xserver.enable = config.canonical.nixosOptions.xserverEnable;
 
-      # Immutable user accounts
+      # Immutable user accounts. The lockout-assertion guardian (a
+      # real admin user with authorized_keys) is owned by
+      # modules/accounts — that module's existence is what lets the
+      # old `users.allowNoPasswordLogin = true` skeleton escape be
+      # removed. See modules/accounts/default.nix and
+      # compliant-nix-config-vault/raw/arch-11-account-lifecycle.md.
       users.mutableUsers = config.canonical.nixosOptions.usersMutableUsers;
-
-      # Skeleton lock-out escape hatch. `users.mutableUsers = false`
-      # triggers a NixOS assertion that requires either root password
-      # or a wheel user with SSH authorized_keys — neither is declared
-      # in the skeleton because no admin user exists yet. Setting
-      # allowNoPasswordLogin = true lets `nix eval` succeed on the
-      # skeleton; real deployments declare
-      # `users.users.admin.openssh.authorizedKeys.keys` and override
-      # this back to false with lib.mkForce in the host config.
-      users.allowNoPasswordLogin = lib.mkDefault true;
 
       # nix-daemon ACL
       nix.settings.allowed-users =

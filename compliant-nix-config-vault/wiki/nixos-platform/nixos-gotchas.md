@@ -101,6 +101,24 @@ Mixing the two — top-level `sops = { ... }` alongside `options.secrets.rotatio
 
 **Follow-up rule:** when adopting a new flake input, grep its default branch for upcoming breaking changes (search the repo's commit history for `buildGo<N>Module`, dropped-compat notices, or explicit "bump to <new-nixpkgs>" commits) before pinning without a rev.
 
+## 16. `environment.etc."login.defs"` Overrides Conflict With Shadow Package
+
+NixOS's shadow package writes `/etc/login.defs` itself. Any `environment.etc."login.defs".text = ''...''` or `environment.etc."login.defs" = { source = ...; }` override fights that write — some fields silently get dropped, some PAM modules read the unintended value, and `lib.mkForce` produces a file that lacks the defaults the shadow package normally supplies.
+
+**Fix:** use the structured `security.loginDefs.settings.*` attrset (NixOS 24.11+). It merges cleanly with shadow-package defaults:
+
+```nix
+security.loginDefs.settings = {
+  PASS_MAX_DAYS = 60;
+  PASS_MIN_DAYS = 1;
+  PASS_MIN_LEN = 15;
+  UMASK = "077";
+  ENCRYPT_METHOD = "SHA512";
+};
+```
+
+Note the types: integers drop the quotes, strings keep them. `SHA_CRYPT_ROUNDS` is split into `SHA_CRYPT_MIN_ROUNDS` + `SHA_CRYPT_MAX_ROUNDS`.
+
 ## Key Takeaways
 
 - Test every Nix snippet against real NixOS 24.11+ evaluation before committing
@@ -111,3 +129,4 @@ Mixing the two — top-level `sops = { ... }` alongside `options.secrets.rotatio
 - DeterminateSystems-hosted CI actions now require FlakeHub auth — audit before adopting
 - When a module uses `options.*`, every config assignment must live under `config.*` — no mixing
 - Flake inputs without a rev track upstream mainline; pin to a SHA for any input that gates the build
+- Structured options beat file-override `.text`/`.source` overrides — use `security.loginDefs.settings.*`, not `environment.etc."login.defs"`

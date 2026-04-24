@@ -21,15 +21,17 @@ let
   # "policy in force".
   canonicalAuthSnapshot =
     lib.generators.toPretty { } {
-      passwordMinLength = authPolicy.passwordMinLength;
-      passwordMaxAgeDays = authPolicy.passwordMaxAgeDays;
-      passwordHistoryRemember = authPolicy.passwordHistoryRemember;
-      lockoutThreshold = authPolicy.lockoutThreshold;
-      lockoutUnlockTimeSeconds = authPolicy.lockoutUnlockTimeSeconds;
-      sessionIdleTimeoutSshSeconds = authPolicy.sessionIdleTimeoutSshSeconds;
-      mfaScope = authPolicy.mfaScope;
-      mfaMechanism = authPolicy.mfaMechanism;
-      sudoTimestampTimeoutMinutes = authPolicy.sudoTimestampTimeoutMinutes;
+      inherit (authPolicy)
+        passwordMinLength
+        passwordMaxAgeDays
+        passwordHistoryRemember
+        lockoutThreshold
+        lockoutUnlockTimeSeconds
+        sessionIdleTimeoutSshSeconds
+        mfaScope
+        mfaMechanism
+        sudoTimestampTimeoutMinutes
+        ;
     };
 
   # The access-review collector runs inside the ARCH-10 snapshot

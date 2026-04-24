@@ -1,0 +1,488 @@
+# Resolved Settings Table — machine-readable version of prd.md Appendix A.
+#
+# Each row records one cross-framework setting: the resolved value, the
+# framework(s) that drove the choice, any values that were proposed and
+# rejected with the reason, and a link back to Appendix A for the full
+# rationale.
+#
+# Consensus rows (every framework agreed) have `consensus: true` and no
+# `rejected_values`. Conflict rows capture the rejected proposals so a
+# future proposal to re-open the same value can be matched against the
+# original rejection reason before it lands.
+#
+# Contract:
+#   - Every row here MUST have a matching default in modules/canonical/default.nix.
+#   - Disagreement between this file and canonical.nix is a build failure
+#     (enforced by ARCH-17 acceptance-criteria test harness when that ships).
+#   - Adding a row here is a documentation change. Changing a `value` is a
+#     compliance decision and requires a PR description that cites the
+#     framework review + updated rationale.
+
+schema_version: 1
+source: docs/prd/prd.md Appendix A
+last_updated: 2026-04-24
+canonical_nix: modules/canonical/default.nix
+
+rows:
+
+  # A.1 Service Binding -------------------------------------------------
+
+  - id: A.1.ollama-host
+    section: A.1 Service Binding
+    setting: Ollama listen address
+    canonical_path: canonical.serviceBinding.ollamaHost
+    value: "127.0.0.1:11434"
+    driving_frameworks: [STIG, HIPAA]
+    consensus: false
+    rejected_values:
+      - value: "0.0.0.0:11434"
+        proposed_by: NIST module (original)
+        rejection_reason: >
+          Ollama has no built-in authentication. Binding to all interfaces
+          exposes an unauthenticated inference API on the LAN. All LAN access
+          must traverse the Nginx TLS reverse proxy.
+    rationale_link: docs/prd/prd.md#a1-service-binding
+
+  - id: A.1.ollama-origins
+    section: A.1 Service Binding
+    setting: Ollama CORS allowlist
+    canonical_path: canonical.serviceBinding.ollamaOrigins
+    value: "http://127.0.0.1:*"
+    driving_frameworks: [HIPAA]
+    consensus: true
+    rationale_link: docs/prd/prd.md#a1-service-binding
+
+  - id: A.1.ssh-listen
+    section: A.1 Service Binding
+    setting: SSH listen address
+    canonical_path: canonical.serviceBinding.sshListen
+    value: lan
+    driving_frameworks: [NIST, STIG, PCI, HIPAA, HITRUST]
+    consensus: true
+    notes: >
+      Symbolic value; the host module resolves "lan" to the deployment
+      interface address. Never 0.0.0.0.
+    rationale_link: docs/prd/prd.md#a1-service-binding
+
+  - id: A.1.app-api-host
+    section: A.1 Service Binding
+    setting: Application API listen address (port 8000)
+    canonical_path: canonical.serviceBinding.appApiHost
+    value: "127.0.0.1:8000"
+    driving_frameworks: [STIG, PCI DSS Req 4]
+    consensus: true
+    rationale_link: docs/prd/prd.md#a1-service-binding
+
+  # A.2 Firewall --------------------------------------------------------
+
+  - id: A.2.firewall-backend
+    section: A.2 Firewall Technology
+    setting: Firewall backend
+    canonical_path: canonical.firewall.backend
+    value: nftables
+    driving_frameworks: [NixOS 24.11 default, PCI DSS, HITRUST]
+    consensus: false
+    rejected_values:
+      - value: iptables (via networking.firewall.extraCommands)
+        proposed_by: NIST, HIPAA, STIG modules
+        rejection_reason: >
+          NixOS 24.11 defaults to nftables. Using legacy iptables extraCommands
+          may silently fail or produce undefined behaviour. All firewall rules
+          must use networking.nftables.ruleset or networking.firewall (which
+          generates nftables internally).
+    rationale_link: docs/prd/prd.md#a2-firewall-technology
+
+  - id: A.2.egress-filtering
+    section: A.2 Firewall Technology
+    setting: Per-UID egress filtering mechanism
+    canonical_path: canonical.firewall.egressFilteringMode
+    value: per-uid-nftables
+    driving_frameworks: [HIPAA, OWASP]
+    consensus: false
+    rejected_values:
+      - value: iptables --uid-owner
+        proposed_by: NIST, HIPAA original
+        rejection_reason: >
+          iptables owner match does not exist in nftables; use meta skuid
+          instead.
+    rationale_link: docs/prd/prd.md#a2-firewall-technology
+
+  # A.3 systemd Hardening -----------------------------------------------
+
+  - id: A.3.mdwe-ollama
+    section: A.3 systemd Hardening
+    setting: MemoryDenyWriteExecute on Ollama / any CUDA service
+    canonical_path: canonical.systemdHardening.memoryDenyWriteExecuteExempt
+    value: ["ollama"]
+    driving_frameworks: [HIPAA §2.3.3]
+    consensus: false
+    rejected_values:
+      - value: "MemoryDenyWriteExecute=true (on ollama)"
+        proposed_by: OWASP module
+        rejection_reason: >
+          CUDA requires W+X memory for JIT compilation of PTX kernels. Setting
+          MemoryDenyWriteExecute=true on a CUDA-facing service crashes GPU
+          inference at runtime. Compensating controls: SystemCallFilter,
+          RestrictAddressFamilies, ProtectSystem=strict, NoNewPrivileges=true.
+    rationale_link: docs/prd/prd.md#a3-systemd-hardening-directives
+
+  - id: A.3.mdwe-non-cuda
+    section: A.3 systemd Hardening
+    setting: MemoryDenyWriteExecute on non-CUDA services
+    canonical_path: canonical.systemdHardening.memoryDenyWriteExecuteServices
+    value: [agent-runner, ai-api]
+    driving_frameworks: [OWASP, NIST SI-3]
+    consensus: true
+    rationale_link: docs/prd/prd.md#a3-systemd-hardening-directives
+
+  - id: A.3.protect-system
+    section: A.3 systemd Hardening
+    setting: ProtectSystem mode
+    canonical_path: canonical.systemdHardening.protectSystem
+    value: strict
+    driving_frameworks: [HIPAA, STIG, NIST revised]
+    consensus: false
+    rejected_values:
+      - value: full
+        proposed_by: NIST module (for Ollama)
+        rejection_reason: >
+          full only protects /usr and /boot, insufficient for ePHI and model
+          integrity. strict makes the entire filesystem read-only; GPU access
+          is granted via explicit ReadWritePaths + DeviceAllow.
+    rationale_link: docs/prd/prd.md#a3-systemd-hardening-directives
+
+  # A.4 SSH -------------------------------------------------------------
+
+  - id: A.4.kbd-interactive
+    section: A.4 SSH Cryptographic Configuration
+    setting: KbdInteractiveAuthentication
+    canonical_path: canonical.ssh.kbdInteractiveAuthentication
+    value: true
+    driving_frameworks: [NIST IA-2(1), PCI DSS, STIG MFA]
+    consensus: false
+    rejected_values:
+      - value: false
+        proposed_by: STIG basic hardening, HITRUST
+        rejection_reason: >
+          TOTP MFA via google-authenticator PAM requires keyboard-interactive.
+          Disabling it breaks MFA. The AuthenticationMethods directive ensures
+          keyboard-interactive is only used for TOTP, never for password auth.
+    rationale_link: docs/prd/prd.md#a4-ssh-cryptographic-configuration
+
+  - id: A.4.ciphers
+    section: A.4 SSH Cryptographic Configuration
+    setting: SSH Ciphers
+    canonical_path: canonical.ssh.ciphers
+    value:
+      - aes256-gcm@openssh.com
+      - aes128-gcm@openssh.com
+      - aes256-ctr
+      - aes128-ctr
+    driving_frameworks: [STIG FIPS]
+    consensus: false
+    rejected_values:
+      - value: chacha20-poly1305@openssh.com (included in FIPS deployments)
+        proposed_by: NIST, PCI modules
+        rejection_reason: >
+          ChaCha20-Poly1305 is not FIPS-approved. Removed for FIPS
+          compatibility. Acceptable to re-add as first cipher for performance
+          when FIPS is not required for a deployment.
+    rationale_link: docs/prd/prd.md#a4-ssh-cryptographic-configuration
+
+  - id: A.4.macs
+    section: A.4 SSH Cryptographic Configuration
+    setting: SSH MACs
+    canonical_path: canonical.ssh.macs
+    value:
+      - hmac-sha2-512-etm@openssh.com
+      - hmac-sha2-256-etm@openssh.com
+    driving_frameworks: [STIG FIPS]
+    consensus: false
+    rejected_values:
+      - value: hmac-sha2-512 (non-ETM), hmac-sha2-256 (non-ETM)
+        proposed_by: STIG FIPS section (original)
+        rejection_reason: >
+          ETM (encrypt-then-MAC) is strictly stronger than non-ETM. Non-ETM
+          variants removed.
+    rationale_link: docs/prd/prd.md#a4-ssh-cryptographic-configuration
+
+  - id: A.4.kex
+    section: A.4 SSH Cryptographic Configuration
+    setting: SSH KexAlgorithms
+    canonical_path: canonical.ssh.kexAlgorithms
+    value:
+      - curve25519-sha256
+      - curve25519-sha256@libssh.org
+      - ecdh-sha2-nistp521
+      - ecdh-sha2-nistp384
+      - ecdh-sha2-nistp256
+    driving_frameworks: [STIG, NIST combined]
+    consensus: false
+    rejected_values:
+      - value: curve25519 only
+        proposed_by: NIST module
+        rejection_reason: >
+          Excludes FIPS clients (NIST P-curves required for FIPS).
+      - value: NIST P-curves only
+        proposed_by: STIG FIPS
+        rejection_reason: >
+          Excludes modern non-FIPS clients that expect curve25519.
+    notes: >
+      Combined list supports both FIPS and non-FIPS clients. For strict
+      FIPS-only deployments: remove curve25519 entries.
+    rationale_link: docs/prd/prd.md#a4-ssh-cryptographic-configuration
+
+  - id: A.4.client-alive-interval
+    section: A.4 SSH Cryptographic Configuration
+    setting: SSH ClientAliveInterval
+    canonical_path: canonical.ssh.clientAliveInterval
+    value: 600
+    driving_frameworks: [STIG]
+    consensus: false
+    rejected_values:
+      - value: 300
+        proposed_by: HIPAA, NIST, PCI, HITRUST
+        rejection_reason: >
+          STIG resolved to 600 in the master PRD.
+    rationale_link: docs/prd/prd.md#a4-ssh-cryptographic-configuration
+
+  - id: A.4.client-alive-count-max
+    section: A.4 SSH Cryptographic Configuration
+    setting: SSH ClientAliveCountMax
+    canonical_path: canonical.ssh.clientAliveCountMax
+    value: 0
+    driving_frameworks: [STIG]
+    consensus: false
+    rejected_values:
+      - value: 3
+        proposed_by: NIST, PCI
+        rejection_reason: >
+          3 misses x 600s = 1800s total idle, looser than STIG. 0 means
+          disconnect immediately after one missed keepalive (600s total).
+    rationale_link: docs/prd/prd.md#a4-ssh-cryptographic-configuration
+
+  # A.5 Log Retention ---------------------------------------------------
+
+  - id: A.5.journal-retention
+    section: A.5 Log Retention
+    setting: systemd journal MaxRetentionSec
+    canonical_path: canonical.logRetention.journalMaxRetention
+    value: "365day"
+    driving_frameworks: [PCI DSS 10.5.1, HITRUST Level 2]
+    consensus: false
+    rejected_values:
+      - value: "90day"
+        proposed_by: NIST, STIG
+        rejection_reason: >
+          Insufficient for PCI's "1 year with 3 months immediately queryable"
+          requirement.
+      - value: "26280h (~3 years)"
+        proposed_by: HIPAA module
+        rejection_reason: >
+          Conflates documentation retention (6 years) with log retention.
+    rationale_link: docs/prd/prd.md#a5-log-retention
+
+  - id: A.5.ai-decision-logs
+    section: A.5 Log Retention
+    setting: AI decision logs retention
+    canonical_path: canonical.logRetention.aiDecisionLogs
+    value: "18month"
+    driving_frameworks: [EU AI Act Art. 12]
+    consensus: true
+    notes: >
+      Separate structured per-request log stream, not systemd journal.
+    rationale_link: docs/prd/prd.md#a5-log-retention
+
+  # A.6 Authentication --------------------------------------------------
+
+  - id: A.6.password-min-length
+    section: A.6 Authentication and Account Policy
+    setting: Password minimum length
+    canonical_path: canonical.auth.passwordMinLength
+    value: 15
+    driving_frameworks: [STIG, HITRUST Level 2]
+    consensus: false
+    rejected_values:
+      - value: 12
+        proposed_by: PCI DSS v4.0
+        rejection_reason: STIG/HITRUST is stricter.
+    rationale_link: docs/prd/prd.md#a6-authentication-and-account-policy
+
+  - id: A.6.password-history
+    section: A.6 Authentication and Account Policy
+    setting: Password history (pam_pwhistory remember)
+    canonical_path: canonical.auth.passwordHistoryRemember
+    value: 24
+    driving_frameworks: [HITRUST Level 2]
+    consensus: false
+    rejected_values:
+      - value: 5
+        proposed_by: STIG
+        rejection_reason: HITRUST's stricter value prevails.
+    rationale_link: docs/prd/prd.md#a6-authentication-and-account-policy
+
+  - id: A.6.password-max-age
+    section: A.6 Authentication and Account Policy
+    setting: Password max age
+    canonical_path: canonical.auth.passwordMaxAgeDays
+    value: 60
+    driving_frameworks: [STIG]
+    consensus: false
+    rejected_values:
+      - value: 365 days
+        proposed_by: HITRUST
+        rejection_reason: STIG is stricter.
+    notes: >
+      NIST 800-63B recommends against periodic rotation, but STIG prescribes
+      it. Acknowledged tension — STIG wins for this target suite.
+    rationale_link: docs/prd/prd.md#a6-authentication-and-account-policy
+
+  - id: A.6.lockout-threshold
+    section: A.6 Authentication and Account Policy
+    setting: Account lockout threshold (pam_faillock deny)
+    canonical_path: canonical.auth.lockoutThreshold
+    value: 5
+    driving_frameworks: [STIG, HITRUST]
+    consensus: false
+    rejected_values:
+      - value: 6
+        proposed_by: PCI DSS
+        rejection_reason: STIG/HITRUST's stricter value prevails.
+    rationale_link: docs/prd/prd.md#a6-authentication-and-account-policy
+
+  - id: A.6.lockout-unlock-time
+    section: A.6 Authentication and Account Policy
+    setting: Account lockout duration (unlock_time)
+    canonical_path: canonical.auth.lockoutUnlockTimeSeconds
+    value: 1800
+    driving_frameworks: [HITRUST Level 2, PCI DSS]
+    consensus: false
+    rejected_values:
+      - value: 900
+        proposed_by: STIG
+        rejection_reason: HITRUST/PCI stricter.
+      - value: "15 min (900s)"
+        proposed_by: Master PRD Appendix A (original)
+        rejection_reason: Corrected to 30 min after review.
+    rationale_link: docs/prd/prd.md#a6-authentication-and-account-policy
+
+  - id: A.6.shell-idle-timeout
+    section: A.6 Authentication and Account Policy
+    setting: Shell session idle timeout (TMOUT)
+    canonical_path: canonical.auth.sessionIdleTimeoutShellSeconds
+    value: 600
+    driving_frameworks: [STIG]
+    consensus: false
+    rejected_values:
+      - value: 900
+        proposed_by: HITRUST, PCI
+        rejection_reason: STIG is stricter.
+    rationale_link: docs/prd/prd.md#a6-authentication-and-account-policy
+
+  # A.9 Encryption ------------------------------------------------------
+
+  - id: A.9.tls-ciphers
+    section: A.9 Encryption
+    setting: TLS ciphers (Nginx)
+    canonical_path: canonical.encryption.tlsCiphers
+    value: ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256
+    driving_frameworks: [HIPAA, NIST SC-8]
+    consensus: false
+    rejected_values:
+      - value: "HIGH:!aNULL:!MD5:!RC4"
+        proposed_by: HIPAA module shorthand
+        rejection_reason: >
+          Includes CBC-mode ciphers vulnerable to padding oracle attacks.
+          AEAD-only explicit list is used instead.
+    notes: >
+      For strict FIPS, remove CHACHA20-POLY1305 entries.
+    rationale_link: docs/prd/prd.md#a9-encryption
+
+  - id: A.9.swap-encryption
+    section: A.9 Encryption
+    setting: Swap encryption mechanism
+    canonical_path: canonical.encryption.swapEncryption
+    value: luks-via-boot.initrd.luks.devices
+    driving_frameworks: [HIPAA, PCI DSS]
+    consensus: false
+    rejected_values:
+      - value: "swapDevices.*.encrypted"
+        proposed_by: PCI module
+        rejection_reason: >
+          Removed in NixOS 23.11+. Setting it on NixOS 24.11 has no effect.
+    rationale_link: docs/prd/prd.md#a9-encryption
+
+  # A.11 tmpfiles -------------------------------------------------------
+
+  - id: A.11.var-log-audit
+    section: A.11 Filesystem Permissions (tmpfiles.rules)
+    setting: /var/log/audit mode/owner/group
+    canonical_path: canonical.tmpfilesRules (path=/var/log/audit)
+    value: {mode: "0700", user: root, group: root}
+    driving_frameworks: [STIG]
+    consensus: false
+    rejected_values:
+      - value: {mode: "0700", user: root, group: audit}
+        proposed_by: HIPAA module
+        rejection_reason: >
+          STIG's stricter root-only access prevails. The audit group read is
+          unnecessary because journalctl/aureport run as root or via sudoers.
+    rationale_link: docs/prd/prd.md#a11-filesystem-permissions-tmpfilesrules
+
+  # A.13 FIPS -----------------------------------------------------------
+
+  - id: A.13.fips-mode
+    section: A.13 FIPS Mode Decision
+    setting: FIPS enforcement mode
+    canonical_path: canonical.fips.mode
+    value: algorithm-compatible
+    driving_frameworks: [STIG acknowledged gap]
+    consensus: false
+    rejected_values:
+      - value: validated (fips=yes in openssl.cnf)
+        proposed_by: STIG FIPS section
+        rejection_reason: >
+          NixOS does not ship a FIPS-validated OpenSSL module. Setting
+          fips=yes without a loaded FIPS provider breaks OpenSSL entirely.
+          Documented as a known gap per STIG Section 11.
+    rationale_link: docs/prd/prd.md#a13-fips-mode-decision
+
+  # A.14 NixOS options --------------------------------------------------
+
+  - id: A.14.nix-allowed-users
+    section: A.14 NixOS-Specific Options
+    setting: nix.settings.allowed-users
+    canonical_path: canonical.nixosOptions.nixAllowedUsers
+    value: [admin]
+    driving_frameworks: [STIG, NIST]
+    consensus: false
+    rejected_values:
+      - value: ["@wheel"]
+        proposed_by: HITRUST module
+        rejection_reason: >
+          Less specific than a named user; acceptable as alternative but
+          not chosen for the baseline.
+      - value: [root, admin]
+        proposed_by: Another PRD section
+        rejection_reason: >
+          root should not need nix-daemon access for normal operation;
+          admin user is sufficient.
+    rationale_link: docs/prd/prd.md#a14-nixos-specific-options
+
+  # A.15 Notify template ------------------------------------------------
+
+  - id: A.15.instance-specifier
+    section: A.15 Notify/Alert Service Template
+    setting: notify-admin@ unit instance specifier
+    canonical_path: canonical.notifyTemplate.instanceSpecifier
+    value: "%i"
+    driving_frameworks: [systemd semantics]
+    consensus: false
+    rejected_values:
+      - value: "$1"
+        proposed_by: NIST module (original)
+        rejection_reason: >
+          $1 is a shell positional parameter, not a systemd specifier.
+          The template unit never receives instance names through $1.
+          Alerting silently failed. Use %i.
+    rationale_link: docs/prd/prd.md#a15-notifyalert-service-template

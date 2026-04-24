@@ -41,23 +41,26 @@ in
     # Unconditional hardening — applies whether or not Secure Boot is on.
     # These are canonical values from Appendix A.14 and A.10.
     {
-      # Bootloader editor lockdown (A.14)
-      boot.loader.systemd-boot.editor =
-        config.canonical.nixosOptions.systemdBootEditor;
+      # Boot-related canonical consumption (bootloader editor, kernel
+      # sysctl for core_pattern, blacklisted modules). Grouped under a
+      # single `boot = { ... }` attrset so statix doesn't flag repeated
+      # top-level keys.
+      boot = {
+        loader.systemd-boot.editor =
+          config.canonical.nixosOptions.systemdBootEditor;
+        kernel.sysctl."kernel.core_pattern" =
+          config.canonical.nixosOptions.coredumpKernelPattern;
+        blacklistedKernelModules = config.canonical.kernelModuleBlacklist;
+      };
 
       # Disable Ctrl-Alt-Del reboot (A.14)
       systemd.ctrlAltDelUnit = config.canonical.nixosOptions.ctrlAltDelUnit;
 
       # Core dump suppression (A.14) — keeps ePHI/CHD out of on-disk
       # dumps. Two-layer: systemd-coredump storage off, kernel pattern
-      # routes any fallback to /bin/false.
+      # (above) routes any fallback to /bin/false.
       systemd.coredump.extraConfig =
         "Storage=${config.canonical.nixosOptions.coredumpStorage}";
-      boot.kernel.sysctl."kernel.core_pattern" =
-        config.canonical.nixosOptions.coredumpKernelPattern;
-
-      # Kernel module blacklist (A.10) — drives from canonical.
-      boot.blacklistedKernelModules = config.canonical.kernelModuleBlacklist;
 
       # Tmpfs hardening — nosuid,nodev,noexec on /tmp. NixOS's
       # `boot.tmp.useTmpfs = true` mounts /tmp as tmpfs but does NOT
@@ -107,7 +110,7 @@ in
 
       boot.lanzaboote = {
         enable = true;
-        pkiBundle = cfg.pkiBundle;
+        inherit (cfg) pkiBundle;
       };
 
       # sbctl exposed for key management. Operator runs:

@@ -223,13 +223,11 @@ The system tracks NixOS security advisories and upstream CVEs for all deployed p
 
 ### 7.13 Secrets Management
 
-Secrets (TLS certificates, SSH host keys, LUKS passphrases, API tokens, TOTP seeds, backup encryption keys) are managed via sops-nix with age encryption. Secrets are:
+Secrets (TLS certificates, SSH host keys, LUKS passphrases, API tokens, TOTP seeds, backup encryption keys) are managed via **sops-nix** with age encryption. The choice is committed — agenix is not supported. See `modules/secrets/default.nix` for the authoritative per-secret declaration list. Secrets are:
 - Encrypted at rest in the Git repository using age keys
 - Decrypted at activation time to `/run/secrets/` (tmpfs, not persisted to disk)
 - Not present in the Nix store or in plaintext in any committed file
 - Rotated on a defined schedule (TLS: annual, SSH host keys: on compromise, API tokens: quarterly)
-
-Alternative: agenix may be used instead of sops-nix with equivalent security properties.
 
 ### 7.14 Boot Integrity
 

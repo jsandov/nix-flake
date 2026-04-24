@@ -101,7 +101,7 @@ The LLM reveals confidential data in its responses: training data memorization, 
 
 ```nix
 {
-  # Use sops-nix or agenix for secrets; never pass secrets as environment variables
+  # Use sops-nix for secrets; never pass secrets as environment variables
   # to AI service processes
   systemd.services.ollama.serviceConfig = {
     ProtectHome = true;

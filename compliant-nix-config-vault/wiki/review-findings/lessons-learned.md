@@ -6,7 +6,7 @@ Key lessons from the PRD development and review process.
 
 1. **NixOS paths are different** — `/usr/bin` doesn't exist. Audit rules and AIDE must use `/run/current-system/sw/bin/`
 2. **nftables is the default** — NixOS 24.11+. Never use iptables `extraCommands`
-3. **Nix store is world-readable** — secrets management (sops-nix/agenix) is non-negotiable
+3. **Nix store is world-readable** — secrets management ([[../shared-controls/secrets-management|sops-nix]]) is non-negotiable; agenix is not supported
 4. **Validate every snippet** — 17+ broken code issues found across modules
 
 ## AI/GPU-Specific Lessons

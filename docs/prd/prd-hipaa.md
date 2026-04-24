@@ -309,7 +309,7 @@ Administrative safeguards are primarily organizational and procedural. However, 
 
 **NixOS implementation requirements:**
 - Remove the user from the flake configuration and rebuild. Because NixOS is declarative, removing a user definition and running `nixos-rebuild switch` removes the account and its SSH keys atomically.
-- Secrets managed via `agenix` or `sops-nix` should have the terminated user's age/GPG key removed from the secrets recipients list, followed by re-encryption of all secrets.
+- Secrets managed via `sops-nix` should have the terminated user's age key removed from the `.sops.yaml` recipients list, followed by re-encryption of all secrets (`sops updatekeys`).
 
 ### 3.4 Information Access Management -- Section 164.308(a)(4)
 
@@ -1080,7 +1080,7 @@ When a potential breach is detected, the system must preserve evidence for the b
 }
 ```
 
-  The RELP (Reliable Event Logging Protocol) transport with TLS ensures both encryption in transit and reliable delivery (no silent message loss on connection interruption, unlike plain TCP syslog). Certificate files must be managed via `agenix` or `sops-nix` and must not reside in the Nix store.
+  The RELP (Reliable Event Logging Protocol) transport with TLS ensures both encryption in transit and reliable delivery (no silent message loss on connection interruption, unlike plain TCP syslog). Certificate files must be managed via `sops-nix` and must not reside in the Nix store.
 
   Alternatively, use `services.vector` or `services.fluentbit` for structured log forwarding with TLS.
 
@@ -1184,7 +1184,7 @@ Under 45 CFR Section 164.402(2) and the HHS Guidance on securing ePHI (74 FR 427
 ```
 
 - **In transit:** TLS 1.2+ with NIST-approved cipher suites (Section 5.5.2).
-- **Key management:** The LUKS passphrase and TLS private keys must be protected. If the encryption key is compromised alongside the data, the safe harbor does not apply. Keys must be managed via `agenix` or `sops-nix`, not stored in the Nix store or Git repository.
+- **Key management:** The LUKS passphrase and TLS private keys must be protected. If the encryption key is compromised alongside the data, the safe harbor does not apply. Keys must be managed via `sops-nix`, not stored in the Nix store or Git repository.
 
 **Critical limitation:** The encryption safe harbor applies ONLY to data at rest on encrypted media and data in transit over encrypted channels. It does NOT apply to ePHI resident in live memory during inference. See the Critical Risk section at the top of this document.
 
@@ -1335,7 +1335,7 @@ Common ways secrets leak into the Nix store:
 - Scripts in `environment.systemPackages` or `systemd.services.*.serviceConfig.ExecStart` that contain hardcoded secrets.
 
 **Mitigations (required):**
-- Use `agenix` or `sops-nix` for all secrets management. These tools decrypt secrets at activation time into `/run/secrets/` (a tmpfs), keeping them out of the store entirely.
+- Use `sops-nix` for all secrets management. It decrypts secrets at activation time into `/run/secrets/` (a tmpfs), keeping them out of the store entirely.
 - Never reference secrets directly in Nix expressions. Always reference runtime secret paths (e.g., `/run/secrets/tls-key`).
 - Audit the Nix store periodically for accidentally committed secrets: `nix-store --query --references /nix/store/*-nginx-*` and similar queries.
 - If ePHI-derived data (e.g., patient-specific configuration, allow-lists with patient identifiers) is ever generated as part of the NixOS configuration, it MUST be handled as a runtime secret, not a build-time input.
@@ -1415,7 +1415,7 @@ The following prioritization considers both HIPAA compliance impact and implemen
 | Breach detection alerting | `audit-and-aide` | 164.400-414 | Kernel log monitoring for `BREACH-DETECT` prefix with watchdog |
 | Emergency mode flake output | Top-level flake | 164.308(a)(7)(ii)(C) | Separate `nixosConfigurations` entry |
 | IPC channel access control | `agent-sandbox` | 164.312(e)(1) | Socket permissions, shared memory isolation |
-| Secrets management audit | `stig-baseline` | 164.312(a)(1) | Nix store leakage checks, agenix/sops-nix enforcement |
+| Secrets management audit | `stig-baseline` | 164.312(a)(1) | Nix store leakage checks, sops-nix enforcement |
 
 ---
 

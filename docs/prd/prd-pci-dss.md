@@ -332,7 +332,7 @@ NixOS is inherently strong for Requirement 2 because the declarative model means
 | 3.5.1 | PAN rendered unreadable anywhere it is stored | Host + application | Full-disk encryption (LUKS); application-layer tokenization |
 | 3.5.1.1 | Hashes of PAN use keyed cryptographic hashes | Application | Out of scope for OS |
 | 3.5.1.2 | If disk-level encryption used, additional controls required | Host | LUKS with separate key management |
-| 3.6.1 | Cryptographic key management procedures defined | Process + host | sops-nix or agenix for key management |
+| 3.6.1 | Cryptographic key management procedures defined | Process + host | sops-nix for key management |
 | 3.7.1 | **[NEW v4.0, effective March 2025]** Key management documented formally | Process | Key lifecycle documentation required |
 
 ### CDE-Scoping Note

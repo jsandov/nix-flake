@@ -1,0 +1,90 @@
+# CI gate for the nix-flake project (ARCH-03).
+#
+# Runs on every PR and on pushes to main. Gates merges on:
+#   1. nix flake check         — evaluates flake outputs, runs checks.*
+#   2. nix eval (drvPath)      — walks the ai-server module tree end-to-end
+#                                without realising any derivation
+#   3. statix check            — anti-pattern lint
+#   4. deadnix --fail          — unused binding detector
+#   5. Legacy FHS path lint    — blocks /usr/bin, /usr/sbin, /sbin (ARCH-06)
+#
+# Action pins use release tags; rotate to commit SHAs + enable Dependabot
+# once the first green run confirms the installer/cache pair still works.
+# See compliant-nix-config-vault/raw/arch-03-ci-research.md for the pin
+# selection rationale and fallback plan.
+
+name: nix-check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nix-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: flake check + eval + lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+            accept-flake-config = false
+            warn-dirty = false
+
+      - name: Enable GitHub Actions cache backend for Nix
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Show Nix version
+        run: |
+          nix --version
+          nix config show experimental-features
+
+      - name: Generate flake.lock if missing
+        # Skeleton repo ships without a committed lock because this environment
+        # has no nix CLI. Once CI produces one, commit it and delete this step.
+        run: |
+          if [ ! -f flake.lock ]; then
+            nix flake lock
+          fi
+
+      - name: nix flake check
+        run: nix flake check --show-trace --no-build
+
+      - name: Evaluate ai-server toplevel (no realisation)
+        run: |
+          nix eval --raw --show-trace \
+            .#nixosConfigurations.ai-server.config.system.build.toplevel.drvPath
+
+      - name: statix — anti-pattern lint
+        run: nix run nixpkgs#statix -- check .
+
+      - name: deadnix — unused binding lint
+        run: nix run nixpkgs#deadnix -- --fail .
+
+      - name: Legacy FHS path lint (ARCH-06)
+        # NixOS does not populate /usr/bin, /usr/sbin, or /sbin. Any reference
+        # is almost certainly a copy-pasted Linux-FHS path that will silently
+        # fail at runtime. Replace with /run/current-system/sw/bin or a Nix
+        # store path.
+        run: |
+          set -u
+          if grep -rnE '/(usr/bin|usr/sbin|sbin)/' modules/ hosts/ 2>/dev/null; then
+            echo "::error::Found legacy FHS paths in modules/ or hosts/"
+            exit 1
+          fi

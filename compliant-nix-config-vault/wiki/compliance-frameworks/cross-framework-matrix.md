@@ -1,6 +1,6 @@
 # Cross-Framework Control Matrix
 
-Which [[architecture/flake-modules|flake modules]] implement controls for which frameworks.
+Which [[../architecture/flake-modules|flake modules]] implement controls for which frameworks.
 
 ## Module-to-Framework Mapping
 
@@ -31,5 +31,5 @@ Which [[architecture/flake-modules|flake modules]] implement controls for which 
 
 - `stig-baseline` touches the most frameworks — it's the foundation everything builds on
 - `audit-and-aide` provides the evidence backbone for all framework audits
-- `agent-sandbox` is the primary defense for [[ai-security/owasp-llm-top-10|OWASP AI threats]]
+- `agent-sandbox` is the primary defense for [[../ai-security/owasp-llm-top-10|OWASP AI threats]]
 - Most controls satisfy multiple frameworks simultaneously — build once, comply many

@@ -37,6 +37,12 @@ services.complianceEvidence.collectors.phiAccessLog = {
 
 Overriding a core collector requires `lib.mkForce` — makes the intent loud. This pattern is the canonical Nix shape for "downstream modules contribute rows" ([[../review-findings/lessons-learned#40-extension-point-options-attrsof-submodule]]).
 
+**Registered downstream collectors.** Framework modules append entries here as they ship; this table is the living inventory.
+
+| Key | Module | What it emits |
+|---|---|---|
+| `accessReview` | [[account-lifecycle]] (ARCH-11) | Admin inventory + SSH key fingerprints + `chage -l` password aging + a `lib.generators.toPretty` snapshot of `canonical.auth.*` values in force. |
+
 ## v1 default collector set (13 + manifest)
 
 | Key | Command | Output | What it proves |

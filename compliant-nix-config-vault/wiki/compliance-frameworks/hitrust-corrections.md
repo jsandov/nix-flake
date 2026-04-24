@@ -56,4 +56,4 @@ HITRUST uses **"alternate controls"** (not "compensating controls" — that's PC
 - Work from MyCSF portal, not summaries or secondary sources
 - Don't claim Level 4+ maturity in Year 1 for any domain
 - The NixOS declarative model is a natural fit for HITRUST — configuration IS documentation IS evidence
-- See [[review-findings/master-review]] for the full scoring breakdown
+- See [[../review-findings/master-review]] for the full scoring breakdown

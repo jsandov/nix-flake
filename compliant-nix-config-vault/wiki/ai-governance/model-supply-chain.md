@@ -71,4 +71,4 @@ Scripts must navigate this format — `find -name "*.bin"` finds nothing.
 - Pinned flake inputs + AIDE monitoring are the best available mitigations
 - Ollama blob format must be understood for integrity verification scripts
 - Review model registry every 6 months — `review_due` field enforces this
-- See [[ai-security/ai-security-residual-risks]] for provenance limitations
+- See [[../ai-security/ai-security-residual-risks]] for provenance limitations

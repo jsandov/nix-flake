@@ -1,10 +1,10 @@
 # CI Gate
 
-The CI contract that catches broken Nix before it merges. Pairs with [[flake-skeleton-pattern]] to make the "every PRD snippet must evaluate" acceptance criterion enforceable rather than aspirational.
+The CI contract that catches broken Nix before it merges. Pairs with [[flake-skeleton-pattern]] to make the "every PRD snippet must evaluate" acceptance criterion enforceable rather than aspirational. Full 7-check breakdown below.
 
 ## Why a Gate is Mandatory
 
-The [[review-findings/master-review]] catalogued 17+ broken Nix snippets in the PRDs — phantom `security.protectKernelImage`, deprecated `Protocol 2`, iptables rules with mutually-exclusive DROPs, audit rules pointing at paths that do not exist on NixOS. Without a gate, every framework module PR would compound unvalidated errors. The gate runs on every PR and on every push to `main`.
+The [[../review-findings/master-review]] catalogued 17+ broken Nix snippets in the PRDs — phantom `security.protectKernelImage`, deprecated `Protocol 2`, iptables rules with mutually-exclusive DROPs, audit rules pointing at paths that do not exist on NixOS. Without a gate, every framework module PR would compound unvalidated errors. The gate runs on every PR and on every push to `main`.
 
 ## What the Gate Runs
 
@@ -20,7 +20,7 @@ Every PR triggers `.github/workflows/nix-check.yml`:
 
 ## Stack Choices
 
-See [[nixos-platform/github-actions-nix-stack]] for the installer + cache + lint stack selected, the supply-chain caveats, and the reasons the DeterminateSystems hosted pieces were rejected.
+See [[../nixos-platform/github-actions-nix-stack]] for the installer + cache + lint stack selected, the supply-chain caveats, and the reasons the DeterminateSystems hosted pieces were rejected.
 
 ## Iterative Discovery
 
@@ -59,7 +59,7 @@ Not every forbidden pattern deserves a permanent lint. The test is whether the r
 ## Key Takeaways
 
 - The gate is the enforcement mechanism for the "every snippet evaluates" acceptance criterion — without it, the master-review findings would re-accumulate.
-- Five checks: `nix flake check`, `nix eval` toplevel, `statix`, `deadnix`, legacy-FHS grep.
+- Seven checks: `nix flake check`, `nix eval` toplevel, `statix`, `deadnix`, legacy-FHS lint (broad/code), legacy-FHS lint (narrow/docs), secrets-in-store leakage lint.
 - `nix eval .drvPath` is the primary smoke test — full-tree parse, no build.
 - Each new CI pass tends to surface one more hidden issue; plan for ≥3 iterations on any real module PR.
 - Lints win over prose conventions because they run on every commit.

@@ -44,4 +44,4 @@ ATLAS technique IDs are actively reorganized across releases. The mappings in th
 - LAN-only posture is the strongest single mitigation — eliminates most exfiltration paths
 - Model integrity monitoring via AIDE catches post-deployment tampering
 - Supply chain provenance is the weakest link — Ollama has no cryptographic attestation
-- See [[ai-governance/model-supply-chain]] for the full download-to-deploy pipeline
+- See [[../ai-governance/model-supply-chain]] for the full download-to-deploy pipeline

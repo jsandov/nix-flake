@@ -49,4 +49,4 @@ If hardware memory encryption is unavailable (expected for workstation hardware)
 - GPU VRAM is also unencrypted and not addressable by NixOS config
 - This risk must be formally accepted and documented, not hand-waved
 - See [[ephi-data-flow]] for controls at each stage of ePHI movement
-- See [[ai-security/ai-security-residual-risks]] for related CUDA/VRAM limitations
+- See [[../ai-security/ai-security-residual-risks]] for related CUDA/VRAM limitations

@@ -54,7 +54,7 @@ Document Ingestion ──> Access Control (per-collection permissions)
 Key points:
 - Documents classified before embedding; access controls inherited from source
 - Vector store AIDE-monitored, access restricted to inference service account
-- Retrieved documents filtered by requestor's access level — see [[hipaa/ephi-data-flow]]
+- Retrieved documents filtered by requestor's access level — see [[../hipaa/ephi-data-flow]]
 - Output citations enable auditability
 - **Currently aspirational** — the project has no RAG application code yet; AI-20 will materialise the flow when the app layer exists. Lineage and governance gaps are documented in [[../shared-controls/residual-risks-register|residual-risks row 6]].
 
@@ -74,4 +74,4 @@ System Events ──> auditd + journald ──> Local Log Store
 - Ollama is bound to localhost only; all LAN access goes through authenticated TLS proxy
 - Agent actions are logged, sandboxed, and gated by human approval for high-risk operations
 - RAG pipeline enforces access control at both ingestion and retrieval
-- Audit flow generates automated evidence for compliance — see [[shared-controls/evidence-generation]]
+- Audit flow generates automated evidence for compliance — see [[../shared-controls/evidence-generation]]

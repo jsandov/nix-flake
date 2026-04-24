@@ -35,7 +35,7 @@ Break-glass SSH key in physical safe. Emergency account in flake with auditd ale
 SSH: `ClientAliveInterval=600`, `ClientAliveCountMax=0`. Console: `TMOUT=600; readonly TMOUT`.
 
 ### Encryption at Rest (§164.312(a)(2)(iv))
-LUKS2 AES-256-XTS. Swap must also be encrypted. See [[compliance-frameworks/canonical-config-values]].
+LUKS2 AES-256-XTS. Swap must also be encrypted. See [[../compliance-frameworks/canonical-config-values]].
 
 ### Backup (§164.308(a)(7))
 BorgBackup with repokey-blake2 encryption for ePHI data directories. Daily schedule, 7/4/12 prune.

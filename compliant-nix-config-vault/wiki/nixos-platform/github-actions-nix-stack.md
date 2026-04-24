@@ -1,6 +1,6 @@
 # GitHub Actions + Nix Stack
 
-Action choices for running `nix flake check` and `nix eval` on GitHub-hosted runners, with the supply-chain caveats learned during CI bring-up. Consumed by [[architecture/ci-gate]].
+Action choices for running `nix flake check` and `nix eval` on GitHub-hosted runners, with the supply-chain caveats learned during CI bring-up. Consumed by [[../architecture/ci-gate]].
 
 ## Recommended Stack (2026)
 
@@ -39,7 +39,7 @@ If the installer is later rotated back to Determinate, set `diagnostic-endpoint:
       .#nixosConfigurations.ai-server.config.system.build.toplevel.drvPath
 ```
 
-`.drvPath` is a string — the evaluator walks the full module tree but no derivation is realised. See [[architecture/flake-skeleton-pattern#evaluate-without-realising]] for why this is the canonical smoke test.
+`.drvPath` is a string — the evaluator walks the full module tree but no derivation is realised. See [[../architecture/flake-skeleton-pattern#evaluate-without-realising]] for why this is the canonical smoke test.
 
 ## Performance Expectations
 

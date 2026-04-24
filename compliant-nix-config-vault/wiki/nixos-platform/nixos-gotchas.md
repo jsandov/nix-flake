@@ -1,6 +1,6 @@
 # NixOS Gotchas
 
-Critical pitfalls discovered during the [[review-findings/master-review|master review]] that will break compliance implementations.
+Critical pitfalls discovered during the [[../review-findings/master-review|master review]] that will break compliance implementations.
 
 ## 1. Nix Store is World-Readable
 
@@ -35,7 +35,7 @@ NixOS 24.11+ defaults to nftables as the firewall backend. Using `networking.fir
 
 ## 5. CUDA Breaks MemoryDenyWriteExecute
 
-CUDA's JIT compiler requires W+X memory. Setting `MemoryDenyWriteExecute=true` on Ollama or any CUDA service **crashes GPU inference at runtime**. See [[ai-security/ai-security-residual-risks]].
+CUDA's JIT compiler requires W+X memory. Setting `MemoryDenyWriteExecute=true` on Ollama or any CUDA service **crashes GPU inference at runtime**. See [[../ai-security/ai-security-residual-risks]].
 
 ## 6. Ollama Doesn't Support sd_notify
 
@@ -51,7 +51,7 @@ Models are content-addressed blobs in `/var/lib/ollama/models/blobs/sha256-<hex>
 
 ## 9. Flake Lock Staleness
 
-NixOS is rolling + locked flake = pinned at a point in time. If `flake.lock` isn't updated regularly, packages accumulate unpatched CVEs. But updating may introduce regressions. Need a defined update cadence with [[shared-controls/vulnerability-management|vulnix scanning]].
+NixOS is rolling + locked flake = pinned at a point in time. If `flake.lock` isn't updated regularly, packages accumulate unpatched CVEs. But updating may introduce regressions. Need a defined update cadence with [[../shared-controls/shared-controls-overview|vulnix scanning]] (control 12 in the shared-controls overview).
 
 ## 10. statix Flags Empty Patterns
 
@@ -97,7 +97,7 @@ Mixing the two — top-level `sops = { ... }` alongside `options.secrets.rotatio
 
 `github:Mic92/sops-nix` (no ref) resolves to the current master of sops-nix. On 2026-02-04 sops-nix master bumped `sops-install-secrets` to `buildGo125Module` and explicitly removed compatibility with NixOS 24.11 and 25.05. A flake that was green on Friday failed on Monday with `Function called without required argument "buildGo125Module"`.
 
-**Fix:** never `url = "github:owner/repo"` without a rev for a flake input that gates the build. Pin to a commit SHA — `github:Mic92/sops-nix/3b4a369df9...` is the last known-good point for nixos-24.11 as of 2026-04. Bump deliberately, not implicitly.
+**Fix:** never `url = "github:owner/repo"` without a rev for a flake input that gates the build. Pin to a commit SHA — the authoritative pin lives in `flake.lock` under the `sops-nix` input rev; consult that rather than a SHA embedded in prose that will go stale. Bump deliberately, not implicitly.
 
 **Follow-up rule:** when adopting a new flake input, grep its default branch for upcoming breaking changes (search the repo's commit history for `buildGo<N>Module`, dropped-compat notices, or explicit "bump to <new-nixpkgs>" commits) before pinning without a rev.
 
@@ -123,26 +123,17 @@ Note the types: integers drop the quotes, strings keep them. `SHA_CRYPT_ROUNDS` 
 
 NixOS asserts that if `users.mutableUsers = false`, at least one of the following must be true: root has a password, some wheel user has a password, or some wheel user has `openssh.authorizedKeys.keys` declared. Otherwise eval fails with `Failed assertions: - Neither the root account nor any wheel user has a password or SSH authorized key`.
 
-The assertion is correct — it prevents a classic lock-out on a real deployment. But a **skeleton flake** that sets `mutableUsers = false` from canonical but hasn't declared the admin user yet hits the assertion and can't pass CI.
+The assertion is correct — it prevents a classic lock-out on a real deployment.
 
-**Fix (skeleton):**
+**Current approach (ARCH-11 onward).** The `modules/accounts/` module declares the admin user with `openssh.authorizedKeys.keys` in the host; that satisfies the assertion structurally. No escape hatch is needed. See [[../shared-controls/account-lifecycle]] for the module surface.
+
+**Historical note — do not copy.** Before ARCH-11, the skeleton used
 
 ```nix
 users.allowNoPasswordLogin = lib.mkDefault true;
 ```
 
-Bypasses the assertion. Real deployments declare the admin user with SSH keys:
-
-```nix
-users.users.admin = {
-  isNormalUser = true;
-  extraGroups = [ "wheel" ];
-  openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAA..." ];
-};
-users.allowNoPasswordLogin = lib.mkForce false;
-```
-
-`lib.mkDefault` on the skeleton + `lib.mkForce` in the host gives the right priority dance: skeleton passes CI; deployment enforces the assertion.
+inside `stig-baseline` to pass CI without an admin user declared, with each deployment overriding back to `lib.mkForce false` once it declared its own user. That escape hatch was retired in PR #49. A lingering `users.allowNoPasswordLogin = true` on current main would be a regression.
 
 ## 18. `boot.tmp.useTmpfs = true` Omits `noexec`
 
@@ -163,7 +154,7 @@ Own the options list; don't rely on the helper.
 ## Key Takeaways
 
 - Test every Nix snippet against real NixOS 24.11+ evaluation before committing
-- The [[review-findings/master-review|master review]] found 17+ broken code issues across all modules
+- The [[../review-findings/master-review|master review]] found 17+ broken code issues across all modules
 - Most gotchas are NixOS being different from traditional Linux, not NixOS being wrong
 - Secrets management is the #1 operational risk — sops-nix is non-negotiable (agenix rejected; see [[../shared-controls/secrets-management]])
 - Linter rules (`statix`, `deadnix`) beat prose conventions because they run on every PR
@@ -171,5 +162,5 @@ Own the options list; don't rely on the helper.
 - When a module uses `options.*`, every config assignment must live under `config.*` — no mixing
 - Flake inputs without a rev track upstream mainline; pin to a SHA for any input that gates the build
 - Structured options beat file-override `.text`/`.source` overrides — use `security.loginDefs.settings.*`, not `environment.etc."login.defs"`
-- `users.mutableUsers = false` triggers a lock-out assertion; use `users.allowNoPasswordLogin = lib.mkDefault true` as the skeleton escape hatch
+- `users.mutableUsers = false` triggers a lock-out assertion; since ARCH-11 the [[../shared-controls/account-lifecycle|accounts module]] satisfies it structurally — the pre-ARCH-11 `users.allowNoPasswordLogin` escape hatch is retired
 - `boot.tmp.useTmpfs = true` omits `noexec` — declare `fileSystems."/tmp"` explicitly if you need all three hardening flags

@@ -27,7 +27,7 @@ The **single source of truth** for the implementation flake. When any module PRD
 | NoNewPrivileges | true | true |
 | PrivateTmp | true | true |
 
-See [[ai-security/ai-security-residual-risks]] for CUDA incompatibility details.
+See [[../ai-security/ai-security-residual-risks]] for CUDA incompatibility details.
 
 ## SSH (Appendix A.4)
 
@@ -49,9 +49,14 @@ See [[ai-security/ai-security-residual-risks]] for CUDA incompatibility details.
 |---|---|---|
 | Password min length | 15 chars | STIG/HITRUST |
 | Password history | 24 | HITRUST L2 |
+| Password max age | 60 days | STIG (NIST 800-63B tension — see `docs/resolved-settings.yaml`) |
 | Lockout threshold | 5 attempts | STIG/HITRUST |
 | Lockout duration | 1800s (30 min) | HITRUST/PCI |
+| Lockout find interval | 900s (15 min) | STIG/HITRUST |
 | Shell TMOUT | 600s | STIG |
+| SSH idle timeout | 600s | STIG |
+| MFA scope | all-remote-admin | STIG/HITRUST/PCI |
+| MFA mechanism | TOTP (Google Authenticator PAM) + FIDO2 ed25519-sk | HIPAA/HITRUST |
 
 ## Log Retention (A.5)
 

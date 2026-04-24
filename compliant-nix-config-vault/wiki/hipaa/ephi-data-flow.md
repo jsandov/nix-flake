@@ -15,7 +15,7 @@ Application retrieves stored documents that may contain ePHI.
 ## Stage 3: Model Inference
 Prompt + context processed by Ollama. **ePHI exists unencrypted in RAM and VRAM.** See [[live-memory-ephi-risk]].
 
-**Controls:** Memory isolation (dedicated user, ProtectSystem=strict), swap encryption, no telemetry, core dumps disabled. **MemoryDenyWriteExecute incompatible with CUDA** — see [[ai-security/ai-security-residual-risks]].
+**Controls:** Memory isolation (dedicated user, ProtectSystem=strict), swap encryption, no telemetry, core dumps disabled. **MemoryDenyWriteExecute incompatible with CUDA** — see [[../ai-security/ai-security-residual-risks]].
 
 ### Context Window Persistence Risk
 Ollama may cache conversation state between requests. ePHI from Patient A may persist when Patient B's request arrives. Requires aggressive session timeouts and per-patient isolation at app layer.
@@ -48,4 +48,4 @@ IPC channels carry ePHI between processes within the host.
 - Stage 3 (inference) has the highest risk due to [[live-memory-ephi-risk]]
 - App-layer controls are required at stages 1, 2, 4, 5, 6 — infrastructure alone is insufficient
 - IPC (stage 7) is often overlooked because it doesn't traverse the network
-- Nix store world-readability is a leakage vector — see [[nixos-platform/nixos-gotchas]]
+- Nix store world-readability is a leakage vector — see [[../nixos-platform/nixos-gotchas]]

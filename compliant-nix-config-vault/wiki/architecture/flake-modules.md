@@ -26,7 +26,7 @@ The system is built as a NixOS flake with six primary modules. Each owns a defin
 - auditd kernel events + journald service logs with persistent storage
 - AIDE file integrity monitoring with hourly checks
 - Drift detection with alerting via `OnFailure=notify-admin@`
-- Automated [[shared-controls/evidence-generation|evidence generation]] for compliance audits
+- Automated [[../shared-controls/evidence-generation|evidence generation]] for compliance audits
 
 ### `agent-sandbox` — AI Agent Isolation
 - systemd security: PrivateTmp, ProtectSystem=strict, NoNewPrivileges, seccomp
@@ -37,7 +37,7 @@ The system is built as a NixOS flake with six primary modules. Each owns a defin
 ### `ai-services` — Inference Stack
 - Ollama bound to `127.0.0.1:11434` (no direct LAN exposure)
 - LAN access via Nginx TLS reverse proxy only
-- Model registry with [[ai-governance/model-supply-chain|provenance tracking]]
+- Model registry with [[../ai-governance/model-supply-chain|provenance tracking]]
 - Per-client rate limiting (≤30 req/min)
 
 ## Dependency Order
@@ -64,7 +64,7 @@ stig-baseline
 
 ## Key Takeaways
 
-- Each module maps to specific compliance control families — see [[compliance-frameworks/cross-framework-matrix]]
+- Each module maps to specific compliance control families — see [[../compliance-frameworks/cross-framework-matrix]]
 - The `stig-baseline` module owns all canonical NixOS options that must be set exactly once
 - `ai-services` depends on three other modules — deploy foundation first
 - Module separation prevents the common failure of a monolithic compliance config

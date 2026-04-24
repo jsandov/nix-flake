@@ -4,7 +4,7 @@ The single-source-of-truth mechanism for every setting whose resolution is drive
 
 ## The Problem It Solves
 
-The [[review-findings/master-review|master review]] called out Systemic Issue #1 — the seven framework PRDs had already diverged on values like `MaxRetentionSec`, SSH cipher lists, password policy, firewall rules, and tmpfiles modes *before any real code existed*. Without a single source of truth, every framework module PR would compound the divergence.
+The [[../review-findings/master-review|master review]] called out Systemic Issue #1 — the seven framework PRDs had already diverged on values like `MaxRetentionSec`, SSH cipher lists, password policy, firewall rules, and tmpfiles modes *before any real code existed*. Without a single source of truth, every framework module PR would compound the divergence.
 
 ## Two Paired Artifacts
 

@@ -26,6 +26,7 @@
           sops-nix.nixosModules.sops
           ./hosts/ai-server
           ./modules/canonical
+          ./modules/meta
           ./modules/secrets
           ./modules/stig-baseline
           ./modules/gpu-node
@@ -38,6 +39,7 @@
 
       nixosModules = {
         canonical = ./modules/canonical;
+        meta = ./modules/meta;
         secrets = ./modules/secrets;
         stig-baseline = ./modules/stig-baseline;
         gpu-node = ./modules/gpu-node;

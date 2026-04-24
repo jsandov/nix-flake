@@ -40,15 +40,12 @@ jobs:
           fetch-depth: 1
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+        uses: cachix/install-nix-action@v27
         with:
-          extra-conf: |
+          extra_nix_config: |
             experimental-features = nix-command flakes
             accept-flake-config = false
             warn-dirty = false
-
-      - name: Enable GitHub Actions cache backend for Nix
-        uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Show Nix version
         run: |

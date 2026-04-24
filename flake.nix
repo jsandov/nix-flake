@@ -35,11 +35,5 @@
       };
 
       formatter.${system} = pkgs.nixfmt-rfc-style;
-
-      checks.${system} = {
-        eval =
-          (self.nixosConfigurations.ai-server.config.system.build.toplevel.drvPath or
-            (throw "ai-server toplevel failed to evaluate"));
-      };
     };
 }

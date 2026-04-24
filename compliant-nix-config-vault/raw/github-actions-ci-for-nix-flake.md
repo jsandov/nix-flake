@@ -6,6 +6,13 @@ Research notes gathered for ARCH-03 (CI gate that runs `nix flake check` and `ni
 
 The research agent that gathered these findings had `WebFetch` and `WebSearch` disabled. Every claim below is grounded in model training data (cutoff January 2026) and must be re-verified against current upstream before merging action pins to `main`. Items with `[verify]` are especially susceptible to drift.
 
+## Post-CI-run update (2026-04-24)
+
+First live CI run (PR #20) confirmed two real issues with the recommended stack:
+
+1. **`DeterminateSystems/magic-nix-cache-action` now requires FlakeHub authentication.** The runner log reported `Unable to authenticate to FlakeHub. Individuals must register at FlakeHub.com; Organizations must create an organization at FlakeHub.com.` This is the supply-chain-drift risk the research already flagged — the DeterminateSystems stack has collapsed magic-nix-cache into their FlakeHub-gated product line. The skeleton CI reverted to `cachix/install-nix-action@v27` with no cache layer; the ai-server skeleton eval is fast enough that caching is noise. When caching becomes necessary, the better target is `nix-community/cache-nix-action@v6` (wraps `actions/cache`) rather than any DeterminateSystems-hosted substituter.
+2. **`checks.<system>.eval = drvPath`** (a string) is rejected by `nix flake check` with `"Flake output 'checks.x86_64-linux.eval' is not a derivation."` `nix flake check` requires `checks.*` to be real derivations. Because the CI workflow already runs a separate `nix eval` step that walks the toplevel, the `checks.eval` output was redundant and was removed. If we want a flake-native eval check later, the idiom is `checks.eval = pkgs.runCommand "eval-check" {} "touch $out"` with the toplevel drvPath referenced in the builder env — but the external `nix eval` step is simpler and surfaces trace lines to the PR annotation surface.
+
 ## Verdict
 
 Yes. GitHub Actions can reliably run `nix flake check` and `nix eval .#nixosConfigurations.ai-server.config.system.build.toplevel.drvPath`. Evaluation-only passes are cheap — typical cold-cache run is 3–8 min; warm is 30–90 s. Free-tier runner budget is not a blocker for the nix-flake project's expected PR volume.

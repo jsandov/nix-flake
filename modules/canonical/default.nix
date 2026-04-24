@@ -16,6 +16,11 @@ in
   # See todos/01-architecture-and-cross-cutting.md ARCH-02 for the driving
   # rationale and MASTER-REVIEW.md "Systemic Issue #1" for the duplication
   # that justified centralisation.
+  #
+  # Audit-consumable companion view: docs/resolved-settings.yaml records
+  # every conflict-resolved row with rejected_values and rationale_link.
+  # ARCH-17 (acceptance-criteria test harness) will enforce agreement
+  # between that YAML and this module's defaults.
 
   options.canonical = {
 

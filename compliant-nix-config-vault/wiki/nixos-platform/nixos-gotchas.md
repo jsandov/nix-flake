@@ -53,9 +53,41 @@ Models are content-addressed blobs in `/var/lib/ollama/models/blobs/sha256-<hex>
 
 NixOS is rolling + locked flake = pinned at a point in time. If `flake.lock` isn't updated regularly, packages accumulate unpatched CVEs. But updating may introduce regressions. Need a defined update cadence with [[shared-controls/vulnerability-management|vulnix scanning]].
 
+## 10. statix Flags Empty Patterns
+
+`statix check` rule `pattern-empty` fails on `{ ... }:` when no args are consumed — it wants `_:`. This conflicts with the "forward-compatible stub" convention of keeping `{ ... }:` so future edits can add `config`, `lib`, `pkgs` without diff noise on the pattern line.
+
+**Fix:** use `_:` in [[../architecture/flake-skeleton-pattern#module-stubs-as-safe-no-ops|module stubs]]. Add `{ lib, ... }:` only when a real reference lands. The diff cost is one line — statix wins because it runs on every PR.
+
+## 11. deadnix Flags Unused `self`
+
+`deadnix --fail .` treats every unread binder as dead code, including `self` in `outputs = { self, nixpkgs, ... }:`. For a skeleton flake with no `checks.*` that reads `self`, remove it.
+
+**Fix:** `outputs = { nixpkgs, ... }:` until a real `self` reference is added.
+
+## 12. Handcrafting `flake.lock` Without a Nix CLI
+
+If the implementation environment has no `nix` binary, a committed `flake.lock` cannot be produced because `narHash` values are *computed*, not declared. Three options:
+
+| Option | Verdict |
+|---|---|
+| Hand-craft | Rejected — `narHash` requires an evaluator. |
+| No lock; CI generates on first run | Accepted for skeleton bootstrap. |
+| CI uploads lock as artifact + opens follow-up PR | Overkill for one-shot bootstrap; consider for recurring lock rotation. |
+
+Skeleton ships without a lock; CI's first green run produces one; commit it back in a follow-up and delete the conditional bootstrap step in [[../architecture/ci-gate]].
+
+## 13. FlakeHub-Coupled GitHub Actions
+
+`DeterminateSystems/magic-nix-cache-action` now fails with `Unable to authenticate to FlakeHub` — the hosted cache has been folded into the FlakeHub product line. Any DeterminateSystems-hosted action must be audited for the same coupling before adoption.
+
+**Fix:** prefer `cachix/install-nix-action@v27` for installation and `nix-community/cache-nix-action@v6` for caching. See [[github-actions-nix-stack]] for the full stack rationale.
+
 ## Key Takeaways
 
 - Test every Nix snippet against real NixOS 24.11+ evaluation before committing
 - The [[review-findings/master-review|master review]] found 17+ broken code issues across all modules
 - Most gotchas are NixOS being different from traditional Linux, not NixOS being wrong
 - Secrets management is the #1 operational risk — sops-nix/agenix is non-negotiable
+- Linter rules (`statix`, `deadnix`) beat prose conventions because they run on every PR
+- DeterminateSystems-hosted CI actions now require FlakeHub auth — audit before adopting

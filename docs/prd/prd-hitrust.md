@@ -267,17 +267,24 @@ flake.nix
     '';
   };
 
-  # Password aging (HITRUST prescriptive thresholds)
-  environment.etc."login.defs".text = ''
-    PASS_MAX_DAYS   365
-    PASS_MIN_DAYS   1
-    PASS_MIN_LEN    15
-    PASS_WARN_AGE   14
-    LOGIN_RETRIES   3
-    LOGIN_TIMEOUT   60
-    ENCRYPT_METHOD  SHA512
-    SHA_CRYPT_ROUNDS 65536
-  '';
+  # Password aging (HITRUST prescriptive thresholds) — NixOS ownership.
+  # DO NOT use `environment.etc."login.defs".text`; it conflicts with the
+  # NixOS shadow package which writes /etc/login.defs itself. Use the
+  # structured `security.loginDefs.settings.*` options instead (NixOS
+  # 24.11+). Values below resolve to prd.md Appendix A.6; HITRUST's
+  # 365-day max age is looser than the canonical 60-day value from STIG,
+  # so the canonical value wins.
+  security.loginDefs.settings = {
+    PASS_MAX_DAYS = 60;
+    PASS_MIN_DAYS = 1;
+    PASS_MIN_LEN = 15;
+    PASS_WARN_AGE = 14;
+    LOGIN_RETRIES = 3;
+    LOGIN_TIMEOUT = 60;
+    ENCRYPT_METHOD = "SHA512";
+    SHA_CRYPT_MAX_ROUNDS = 65536;
+    SHA_CRYPT_MIN_ROUNDS = 65536;
+  };
 
   # SSH key-only authentication (strongest control - eliminates password attack surface)
   services.openssh.settings = {
@@ -1198,7 +1205,7 @@ HITRUST prescriptive requirement: Removable media must be **disabled by default*
 
 HITRUST prescriptive requirements for transmission protection:
 - **TLS 1.2 minimum** required for all transmissions containing sensitive data (HITRUST is explicit where NIST says "FIPS-validated cryptography")
-- **SSH Protocol 2 only** (NixOS OpenSSH defaults to Protocol 2)
+- **SSH Protocol 2 only** — implicit. OpenSSH 7.6+ removed Protocol 1 support and the `Protocol` directive itself; there is no option to configure. Do not set `Protocol = 2` in `services.openssh.extraConfig` — it will fail sshd startup on NixOS (ships OpenSSH 9.x).
 - Cipher suites must provide **128-bit equivalent strength minimum** (AES-128-GCM or stronger)
 - Perfect forward secrecy ciphers **required at Level 3** (ECDHE key exchange)
 

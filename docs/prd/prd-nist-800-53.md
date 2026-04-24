@@ -1245,7 +1245,13 @@ in
     package = config.boot.kernelPackages.nvidiaPackages.stable;
   };
 
-  # Still needed for driver selection even on headless systems
+  # Driver selection via services.xserver.videoDrivers is honoured even
+  # when services.xserver.enable = false. For a fully headless CUDA host
+  # with no X server, hardware.nvidia.package (set above) is sufficient;
+  # the videoDrivers line remains for explicit documentation of the
+  # chosen driver family. See MASTER-REVIEW "NIST must-fix #8" — the
+  # earlier revision of this snippet omitted hardware.nvidia entirely,
+  # which IS a real bug; the fix is the block above, not the line below.
   services.xserver.videoDrivers = [ "nvidia" ];
 
   # GPU users group for device access

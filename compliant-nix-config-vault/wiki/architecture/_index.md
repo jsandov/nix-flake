@@ -13,3 +13,4 @@ System architecture for the compliance-mapped NixOS AI server.
 - [[nix-implementation-patterns]] — Reusable patterns for module composition and option design
 - [[data-flows]] — How data moves through the inference and agent pipelines
 - [[threat-model]] — Protected assets, adversary model, and scope boundaries
+- [[build-and-test-strategy]] — nixos-generators + runNixOSTest + nixos-anywhere + disko; CI cadence tiers (per-PR fast / nightly full / release-only signing)

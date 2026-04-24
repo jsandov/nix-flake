@@ -9,3 +9,4 @@ Cross-framework requirements implemented once and satisfying multiple compliance
 - [[residual-risks-register]] — What infrastructure cannot solve: the consolidated residual-risk appendix
 - [[evidence-generation]] — Automated compliance evidence collection
 - [[secrets-management]] — sops-nix for secrets lifecycle (agenix rejected)
+- [[account-lifecycle]] — `modules/accounts/` interactive operator identity + quarterly access-review collector (first real ARCH-10 extension-point consumer)

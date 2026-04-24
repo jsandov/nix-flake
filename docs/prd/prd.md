@@ -140,7 +140,33 @@ Agent Request ──> Approval Gate (high-risk check)
 - **Action logging**: Every tool invocation is logged with arguments and results for audit
 - **Result delivery**: Output sanitized before return to agent context
 
-### 6.3 Audit and Evidence Flow
+### 6.3 RAG Ingestion and Retrieval Flow
+
+Retrieval-augmented generation is a structurally distinct data path from §6.1. It introduces an **ingestion-time** pipeline (source → chunks → vectors → index) that runs before any inference occurs, and a **retrieval-time** pipeline that composes retrieved chunks into the inference request. Each stage introduces controls that the inference flow alone does not express.
+
+```
+Source ──[provenance record]──> Chunker ──[chunk metadata]──> Embedder
+  ──[versioned vector]──> Vector Store (encrypted at rest)
+  ──[Query]──> Retrieval (top-k + lineage) ──> Inference (§6.1)
+```
+
+**Controls per stage:**
+- **Source acquisition (file, URL, upload)**: provenance record captures source URI, acquisition timestamp, content hash, and consent/licensing metadata; input size limits enforced; file-type allowlist rejects executable and opaque binary formats.
+- **Chunking**: chunker version stamped into every chunk record; per-chunk metadata preserves parent document hash, chunk index, and chunker configuration version so a retrieved chunk can be traced to its exact split.
+- **Embedding**: embedding model version stamped alongside each vector; deterministic-or-nondeterministic flag recorded so reproducibility claims are honest; model source verification ties into the model supply chain controls (see §7.8).
+- **Index storage (vector store)**: encryption at rest (LUKS for the storage volume; see §7.1); access control is UID-scoped to the retrieval service account; per-chunk lineage fields from earlier stages are preserved so retrieval can reconstruct full provenance.
+- **Retrieval (query → top-k)**: retrieval audit log records the query, chunks returned, and relevance scores; per-query rate limiting applies independently of §6.1 inference rate limits; classification-tier gating prevents Restricted-tier chunks from being retrieved into a non-Restricted inference context (see §7.16).
+- **Inference composition**: retrieved chunks and the user query are injected into the LLM prompt; chunk provenance is propagated into inference logs so every response is traceable to its sources; indirect-prompt-injection mitigations (instruction stripping, delimiter fencing) apply to retrieved content; tier-mixing across Restricted / Confidential / Internal boundaries is prohibited within a single composed prompt.
+
+**Retention**: retrieval audit logs follow the canonical AI decision log retention of 18 months (see `modules/canonical/default.nix` `logRetention.aiDecisionLogs = "18month"`).
+
+**Framework driver**: ISO 42001 Annex A.6.2 (data management) — see `docs/prd/prd-ai-governance.md` §A.6 and §3.2.1 for the RAG-specific data governance requirements this flow operationalises.
+
+**Residual risk**: this flow enumerates the controls a future RAG application must implement; it does not eliminate the application-layer lineage gap. See `docs/residual-risks.md` row 6 ("RAG Data Lineage and Versioning") for what infrastructure cannot mitigate on its own.
+
+**Implementation status**: **not currently implemented.** This repository contains no RAG application code, no vector store module, and no retrieval service. §6.3 is documented as an **aspirational flow** so downstream modules and residual-risk tracking have a single architectural reference. The future AI-20 TODO will materialise this flow — selecting a vector store, defining the chunk schema, and wiring the ingestion and retrieval services into the flake — at which point the stage-by-stage controls above become implementation requirements rather than design intent.
+
+### 6.4 Audit and Evidence Flow
 
 ```
 System Events ──> auditd + journald ──> Local Log Store
@@ -149,25 +175,6 @@ System Events ──> auditd + journald ──> Local Log Store
   ──> Evidence Generator (periodic compliance snapshots)
   ──> Incident Response Hooks (threshold-based triggers)
 ```
-
-### 6.4 RAG Pipeline Flow
-
-```
-Document Ingestion ──> Access Control (per-collection permissions)
-  ──> Embedding Model ──> Vector Store (encrypted at rest)
-  ──> Query: User Prompt ──> Embedding ──> Similarity Search
-  ──> Context Assembly (relevance filtering, access control check)
-  ──> Inference (prompt + retrieved context)
-  ──> Output (with source citations)
-```
-
-**Controls at each stage:**
-- **Ingestion**: Documents classified before embedding; access controls inherited from source
-- **Embedding**: Embedding model verified against manifest; no sensitive data in model weights
-- **Vector store**: Encrypted at rest, AIDE-monitored, access restricted to inference service account
-- **Query**: Rate-limited, logged, access control verified per collection
-- **Context assembly**: Retrieved documents filtered by requestor's access level
-- **Output**: Source citations enable auditability; output logged for compliance
 
 ## 7. Shared Requirements
 

@@ -1231,9 +1231,10 @@ HITRUST prescriptive requirements for transmission protection:
       "-w /etc/passwd -p wa -k passwd_changes"
       "-w /etc/group -p wa -k group_changes"
 
-      # Privilege escalation
-      "-w /usr/bin/sudo -p x -k privilege_escalation"
-      "-w /usr/bin/su -p x -k privilege_escalation"
+      # Privilege escalation — NixOS paths: setuid wrappers live in
+      # /run/wrappers/bin/, not /usr/bin/.
+      "-w /run/wrappers/bin/sudo -p x -k privilege_escalation"
+      "-w /run/wrappers/bin/su -p x -k privilege_escalation"
       "-a always,exit -F arch=b64 -S setuid -S setgid -k privilege_escalation"
 
       # File system changes to critical paths
@@ -1245,9 +1246,10 @@ HITRUST prescriptive requirements for transmission protection:
       "-w /etc/resolv.conf -p wa -k network_config"
       "-a always,exit -F arch=b64 -S sethostname -S setdomainname -k network_config"
 
-      # Kernel module operations
-      "-w /sbin/modprobe -p x -k kernel_modules"
-      "-w /sbin/insmod -p x -k kernel_modules"
+      # Kernel module operations — NixOS paths: userland module tools
+      # live in /run/current-system/sw/bin/, not /sbin/.
+      "-w /run/current-system/sw/bin/modprobe -p x -k kernel_modules"
+      "-w /run/current-system/sw/bin/insmod -p x -k kernel_modules"
       "-a always,exit -F arch=b64 -S init_module -S delete_module -k kernel_modules"
 
       # Time changes (HITRUST: clock synchronization must be audited)

@@ -74,14 +74,29 @@ jobs:
       - name: deadnix — unused binding lint
         run: nix run nixpkgs#deadnix -- --fail .
 
-      - name: Legacy FHS path lint (ARCH-06)
+      - name: Legacy FHS path lint — module and host code (ARCH-06)
         # NixOS does not populate /usr/bin, /usr/sbin, or /sbin. Any reference
-        # is almost certainly a copy-pasted Linux-FHS path that will silently
-        # fail at runtime. Replace with /run/current-system/sw/bin or a Nix
-        # store path.
+        # in real config code is almost certainly a copy-pasted Linux-FHS path
+        # that will silently fail at runtime. Replace with
+        # /run/current-system/sw/bin (standard binaries), /run/wrappers/bin
+        # (setuid wrappers), or an explicit Nix store path.
         run: |
           set -u
           if grep -rnE '/(usr/bin|usr/sbin|sbin)/' modules/ hosts/ 2>/dev/null; then
             echo "::error::Found legacy FHS paths in modules/ or hosts/"
+            exit 1
+          fi
+
+      - name: Legacy FHS path lint — PRD audit-rule syntax (ARCH-06)
+        # PRD files contain legitimate descriptive references to /usr/bin
+        # etc. ("these paths do not exist on NixOS", "DO NOT monitor",
+        # shebangs). This lint is narrower than the module/host one: it
+        # matches only the quoted audit-rule syntax `"-w /usr/bin/..."`
+        # that denotes an actual broken auditd rule. Descriptive prose
+        # is allowed; broken rules are not.
+        run: |
+          set -u
+          if grep -rnE '"-w /(usr/bin|usr/sbin|sbin)/' docs/ 2>/dev/null; then
+            echo "::error::Found audit rules referencing FHS paths that do not exist on NixOS — use /run/wrappers/bin or /run/current-system/sw/bin"
             exit 1
           fi

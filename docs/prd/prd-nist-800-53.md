@@ -973,9 +973,10 @@ in
     # Audit log tampering detection (AU-9)
     "-w /var/log/audit/ -p wa -k audit-log-tamper"
 
-    # Module loading (SI-3, SI-7)
-    "-w /sbin/insmod -p x -k module-load"
-    "-w /sbin/modprobe -p x -k module-load"
+    # Module loading (SI-3, SI-7) — NixOS paths: /sbin is empty, use
+    # /run/current-system/sw/bin instead.
+    "-w /run/current-system/sw/bin/insmod -p x -k module-load"
+    "-w /run/current-system/sw/bin/modprobe -p x -k module-load"
     "-a always,exit -F arch=b64 -S init_module -S finit_module -k module-load"
   ];
 

@@ -16,6 +16,7 @@
         inherit system;
         modules = [
           ./hosts/ai-server
+          ./modules/canonical
           ./modules/stig-baseline
           ./modules/gpu-node
           ./modules/lan-only-network
@@ -26,6 +27,7 @@
       };
 
       nixosModules = {
+        canonical = ./modules/canonical;
         stig-baseline = ./modules/stig-baseline;
         gpu-node = ./modules/gpu-node;
         lan-only-network = ./modules/lan-only-network;

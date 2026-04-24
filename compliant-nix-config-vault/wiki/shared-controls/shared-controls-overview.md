@@ -10,18 +10,18 @@ Sixteen controls demanded by multiple frameworks, implemented once in the approp
 | 2 | SSH Hardening (key-only + MFA) | stig-baseline | All frameworks |
 | 3 | Audit Logging (auditd + journald) | audit-and-aide | All frameworks |
 | 4 | NTP Synchronization (Chrony) | audit-and-aide | NIST AU-8, PCI Req 10, HIPAA, STIG |
-| 5 | File Integrity Monitoring (AIDE) | audit-and-aide | NIST SI-7, PCI Req 11, HIPAA, STIG |
-| 6 | Egress Filtering | lan-only-network | NIST SC-7, PCI Req 1, OWASP |
-| 7 | Agent Sandboxing (systemd) | agent-sandbox | OWASP Agentic, all frameworks (least privilege) |
-| 8 | Model Provenance Verification | ai-services | MITRE ATLAS, NIST AI RMF, EU AI Act |
+| 5 | File Integrity Monitoring (AIDE) | audit-and-aide (INFRA-09 future submodule) | NIST SI-7, PCI Req 11, HIPAA, STIG |
+| 6 | Egress Filtering | lan-only-network **[stub]** | NIST SC-7, PCI Req 1, OWASP |
+| 7 | Agent Sandboxing (systemd) | agent-sandbox **[stub]** | OWASP Agentic, all frameworks (least privilege) |
+| 8 | Model Provenance Verification | ai-services **[stub]** | MITRE ATLAS, NIST AI RMF, EU AI Act |
 | 9 | [[evidence-generation]] | audit-and-aide | All frameworks |
-| 10 | Incident Response Hooks | audit-and-aide | NIST IR, HIPAA, PCI Req 12, HITRUST |
+| 10 | Incident Response Hooks | audit-and-aide (planned via `OnFailure=notify-admin@`; dedicated wiki article will follow the shipping module) | NIST IR, HIPAA, PCI Req 12, HITRUST |
 | 11 | Backup and Recovery | stig-baseline | NIST CP, HIPAA, PCI Req 12, HITRUST |
-| 12 | Vulnerability Management | stig-baseline | NIST RA/SI, PCI Req 6, HIPAA, STIG |
+| 12 | Vulnerability Management | stig-baseline (vulnix cadence planned; dedicated wiki article will follow the shipping module) | NIST RA/SI, PCI Req 6, HIPAA, STIG |
 | 13 | [[secrets-management]] | secrets | All frameworks |
 | 14 | Boot Integrity (UEFI Secure Boot) | stig-baseline | STIG, NIST SI-7 |
 | 15 | [[account-lifecycle]] | accounts | All frameworks |
-| 16 | Data Classification (4 levels) | All | All frameworks |
+| 16 | Data Classification (4 levels) | meta (ARCH-08) — typed options; consumed by audit-and-aide (shipped) and `agent-sandbox`/`ai-services` **[stubs]** | All frameworks |
 
 ## Data Classification Scheme
 

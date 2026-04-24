@@ -33,7 +33,20 @@ Each pass unlocks the next layer. **Budget ≥3 CI iterations for any non-trivia
 
 ## Meta-Lesson
 
-A strict lint beats a human convention every time, because the lint survives the humans. [[review-findings/lessons-learned]] frames this as the broader ARCH-16 boundary-lints principle: any time the PRD prose and the linter disagree, the linter wins because it runs on every PR.
+A strict lint beats a human convention every time, because the lint survives the humans. [[../review-findings/lessons-learned]] frames this as the broader ARCH-16 boundary-lints principle: any time the PRD prose and the linter disagree, the linter wins because it runs on every PR.
+
+## When to Lint vs When to Sweep
+
+Not every forbidden pattern deserves a permanent lint. The test is whether the regex can distinguish real usage from descriptive prose without false-positives.
+
+| Case | Lint or sweep? | Why |
+|---|---|---|
+| FHS paths in `modules/` and `hosts/` | Lint (broad) | Real code has no legitimate reason to name `/usr/bin/*`. |
+| Audit-rule syntax in `docs/` | Lint (narrow — `"-w /...`) | The quoted syntax is unambiguous; descriptive prose doesn't use it. |
+| `environment.etc."login.defs"` overrides (INFRA-03) | Sweep only | The replacement prose says "DO NOT use environment.etc..." — a lint couldn't tell the warning from the anti-pattern. |
+| Missing `lib.mkDefault` on host-level defaults | Sweep only | The pattern is structural; grep can't read priority intent. |
+
+**Rule:** if the regex would fire on the comments that explain the rule, make it a sweep. If the regex would fire only on real usage, make it a lint. The two-layer FHS lint (broad on code, narrow on docs) is the canonical example of applying this rule twice in different scopes — see [[../nixos-platform/nixos-audit-rule-paths#ci-lint-pattern]].
 
 ## Known Caveats
 

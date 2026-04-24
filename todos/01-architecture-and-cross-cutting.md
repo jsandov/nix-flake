@@ -81,7 +81,7 @@ Add `lanzaboote` as a flake input and wire it into `stig-baseline` with the cano
 - **Effort:** M
 - **Depends on:** ARCH-02, ARCH-04
 - **Source:** prd.md §7.9, wiki/shared-controls/evidence-generation.md, MASTER-REVIEW.md NIST should-fix
-- **Status:** ✓ PR #TBD
+- **Status:** ✓ PR #47
 
 Build `modules/audit-and-aide/evidence.nix` that runs weekly via systemd timer AND on every `nixos-rebuild switch` via `system.activationScripts`. Collects: `getent passwd/group`, `nft list ruleset`, `auditctl -l`, `nix-store --query --requisites /run/current-system`, `nixos-rebuild list-generations`, `sshd -T`, `cryptsetup status`, `nix-store --verify`, `nix flake metadata --json`, `nixos-version`, `nix-info -m`, the resolved-settings YAML from ARCH-04, and a SHA-256 manifest. Writes to `/var/lib/compliance-evidence/YYYYMMDD/` (permissions 0750 root:root per A.11). Every framework agent reuses this hook instead of rolling its own.
 

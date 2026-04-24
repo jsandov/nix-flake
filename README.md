@@ -42,7 +42,7 @@ nix-flake/
 
 **Wiki** (`compliant-nix-config-vault/`) is a structured knowledge base built from the PRDs. It distills ~475KB of PRD content into cross-linked, navigable articles organized by topic. Open it in [Obsidian](https://obsidian.md) to browse the wiki graph, or read the markdown directly. Entry point: `wiki/_master-index.md`.
 
-**Flake** (not yet implemented) will contain the NixOS modules that implement the requirements. The six modules are: `stig-baseline`, `gpu-node`, `lan-only-network`, `audit-and-aide`, `agent-sandbox`, `ai-services`.
+**Flake** (`flake.nix`, `modules/`, `hosts/ai-server/`) is a scaffolded skeleton. The six modules — `stig-baseline`, `gpu-node`, `lan-only-network`, `audit-and-aide`, `agent-sandbox`, `ai-services` — are stubs that import each other in dependency order so the flake evaluates end-to-end. Implementation is tracked in [`todos/`](todos/README.md), starting with ARCH-01 (this skeleton) and ARCH-03 (CI evaluation gate).
 
 ## Compliance Targets
 

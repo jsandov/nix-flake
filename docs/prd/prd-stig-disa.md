@@ -788,7 +788,11 @@ STIG requires multi-factor authentication for privileged remote access. The `pam
       ];
       SystemCallArchitectures = "native";
 
-      # Memory protections (MemoryDenyWriteExecute may conflict with CUDA JIT)
+      # Memory protections. IMPORTANT: MemoryDenyWriteExecute must NOT be
+      # enabled on this Ollama service — CUDA's JIT compiler requires W+X
+      # memory. Enabling it crashes GPU inference at runtime. See
+      # prd.md Appendix A.3 and prd-hipaa.md §2.3.3 for the canonical
+      # rationale and compensating controls.
       LockPersonality = true;
       RestrictRealtime = true;
       RestrictSUIDSGID = true;

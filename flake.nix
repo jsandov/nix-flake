@@ -3,10 +3,14 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    { nixpkgs, ... }:
+    { nixpkgs, sops-nix, ... }:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -15,8 +19,10 @@
       nixosConfigurations.ai-server = nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [
+          sops-nix.nixosModules.sops
           ./hosts/ai-server
           ./modules/canonical
+          ./modules/secrets
           ./modules/stig-baseline
           ./modules/gpu-node
           ./modules/lan-only-network
@@ -28,6 +34,7 @@
 
       nixosModules = {
         canonical = ./modules/canonical;
+        secrets = ./modules/secrets;
         stig-baseline = ./modules/stig-baseline;
         gpu-node = ./modules/gpu-node;
         lan-only-network = ./modules/lan-only-network;

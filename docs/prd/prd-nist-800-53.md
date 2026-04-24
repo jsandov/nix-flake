@@ -199,7 +199,7 @@ The main PRD defines functional requirements, acceptance criteria, and a cross-f
 | IA-2(2) | Multi-Factor Authentication to Non-Privileged Accounts | Host | If non-privileged interactive users exist, same PAM MFA config applies. For this system, the only interactive account is `admin`. |
 | IA-3 | Device Identification and Authentication | Org + Host | SSH host keys serve as device authentication. `services.openssh.hostKeys` declared in config. Client-side `known_hosts` verification. |
 | IA-4 | Identifier Management | Host + Org | User identifiers (usernames, UIDs) declared in `users.users.*` and `users.groups.*`. No shared accounts. Service accounts use system UIDs. |
-| IA-5 | Authenticator Management | Host + Org | SSH keys managed outside Nix store. `sops-nix` or `agenix` for encrypted secrets. `users.users.admin.openssh.authorizedKeys.keys` declares authorized public keys in config. Private keys never in repo. |
+| IA-5 | Authenticator Management | Host + Org | SSH keys managed outside Nix store. `sops-nix` for encrypted secrets (project decision; agenix not supported). `users.users.admin.openssh.authorizedKeys.keys` declares authorized public keys in config. Private keys never in repo. |
 | IA-5(1) | Authenticator Management: Password-Based Authentication | Host | Password auth disabled for SSH. If local console access uses passwords: `security.pam.services.login` with password complexity via `security.pam.services.login.rules.password` using `pam_pwquality`. |
 | IA-6 | Authentication Feedback | Host | Default PAM behavior obscures passwords. SSH key auth does not display authenticator. |
 | IA-8 | Identification and Authentication (Non-Organizational Users) | N/A | No non-organizational users. LAN-only, single-operator system. |
@@ -522,7 +522,7 @@ Each admin user must run `google-authenticator` on first login to generate their
 | SC-7(5) | Boundary Protection: Deny by Default / Allow by Exception | Host | `networking.firewall.enable = true` implements default deny. Explicit allowlists per interface. |
 | SC-8 | Transmission Confidentiality and Integrity | Host + Org | SSH provides encrypted management channel. Ollama and app APIs must use TLS on LAN via Nginx reverse proxy with TLS termination. See SC-8 implementation below. |
 | SC-10 | Network Disconnect | Host | `services.openssh.settings.ClientAliveInterval = 300` and `ClientAliveCountMax = 3` terminate idle SSH sessions. |
-| SC-12 | Cryptographic Key Establishment and Management | Host + Org | SSH host keys managed via `services.openssh.hostKeys`. User SSH keys managed outside config. TLS certificates for SC-8 managed via `sops-nix`/`agenix` (manual rotation) or internal ACME CA (`step-ca`); see SC-12 implementation above. Certificates must be rotated at least every 90 days. LUKS keys escrowed per organizational process. |
+| SC-12 | Cryptographic Key Establishment and Management | Host + Org | SSH host keys managed via `services.openssh.hostKeys`. User SSH keys managed outside config. TLS certificates for SC-8 managed via `sops-nix` (manual rotation) or internal ACME CA (`step-ca`); see SC-12 implementation above. Certificates must be rotated at least every 90 days. LUKS keys escrowed per organizational process. |
 | SC-13 | Cryptographic Protection | Host | LUKS (AES-256) for data at rest. SSH (ChaCha20/AES-GCM) for data in transit. TLS 1.2+ for service APIs. `services.openssh.settings.Ciphers` and `KexAlgorithms` hardened to FIPS-approved or strong algorithms. |
 | SC-15 | Collaborative Computing Devices and Applications | N/A | No collaborative computing devices (cameras, microphones) on a headless server. |
 | SC-17 | Public Key Infrastructure Certificates | Host + Org | SSH host key fingerprints published to admin. TLS certificates for LAN services from internal CA or self-signed with pinning. |
@@ -619,7 +619,7 @@ Each admin user must run `google-authenticator` on first login to generate their
 
 #### NixOS Implementation: SC-12 TLS Certificate Lifecycle
 
-TLS certificates used for SC-8 must be generated, distributed, and rotated on a defined schedule. For LAN-only servers without public DNS, use either manual certificate management with `sops-nix`/`agenix` for encrypted secret storage, or an internal ACME CA (e.g., `step-ca`).
+TLS certificates used for SC-8 must be generated, distributed, and rotated on a defined schedule. For LAN-only servers without public DNS, use either manual certificate management with `sops-nix` for encrypted secret storage, or an internal ACME CA (e.g., `step-ca`).
 
 ```nix
 {

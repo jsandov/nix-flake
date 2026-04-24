@@ -1186,7 +1186,7 @@ HITRUST prescriptive requirement: Removable media must be **disabled by default*
   };
 
   # NOTE: ACME/Let's Encrypt cannot validate .local domains.
-  # For LAN-only servers, use manual certificate management via sops-nix/agenix.
+  # For LAN-only servers, use manual certificate management via sops-nix.
   # This block is illustrative only; the implementation uses manual certs.
   # Internal service TLS certificate management
   security.acme = {

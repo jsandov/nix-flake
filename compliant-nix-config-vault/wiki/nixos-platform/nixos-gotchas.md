@@ -12,7 +12,7 @@ Critical pitfalls discovered during the [[review-findings/master-review|master r
 - Config files that interpolate secrets
 - Scripts with hardcoded secrets in `ExecStart`
 
-**Fix:** Always use sops-nix or agenix. Never reference secrets directly in Nix expressions. Secrets go to `/run/secrets/` (tmpfs).
+**Fix:** Use [[../shared-controls/secrets-management|sops-nix]] (project decision — not agenix). Never reference secrets directly in Nix expressions. Secrets go to `/run/secrets/` (tmpfs).
 
 ## 2. NixOS Paths Are Different
 
@@ -88,6 +88,6 @@ Skeleton ships without a lock; CI's first green run produces one; commit it back
 - Test every Nix snippet against real NixOS 24.11+ evaluation before committing
 - The [[review-findings/master-review|master review]] found 17+ broken code issues across all modules
 - Most gotchas are NixOS being different from traditional Linux, not NixOS being wrong
-- Secrets management is the #1 operational risk — sops-nix/agenix is non-negotiable
+- Secrets management is the #1 operational risk — sops-nix is non-negotiable (agenix rejected; see [[../shared-controls/secrets-management]])
 - Linter rules (`statix`, `deadnix`) beat prose conventions because they run on every PR
 - DeterminateSystems-hosted CI actions now require FlakeHub auth — audit before adopting

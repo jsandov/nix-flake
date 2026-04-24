@@ -322,7 +322,7 @@ The design philosophy is: implement every technical control possible at the host
 
 3. **Framework overlap and conflict**: Multiple frameworks may impose contradictory requirements (e.g., log retention periods, encryption algorithm requirements). Conflicts are resolved in Appendix A toward the strictest applicable requirement.
 
-4. **Application-layer gaps**: Host-level controls cannot fully prevent prompt injection, indirect prompt injection, or semantic attacks on LLM outputs. Application-layer defenses are complementary and outside the flake scope.
+4. **Application-layer gaps**: Host-level controls cannot fully prevent prompt injection, indirect prompt injection, or semantic attacks on LLM outputs. Application-layer defenses are complementary and outside the flake scope. See [`docs/residual-risks.md`](../residual-risks.md) for the full list of risks that infrastructure does not and cannot eliminate.
 
 5. **Single-host architecture**: This design targets a single workstation. Scaling to multiple nodes would require additional controls for inter-node communication, distributed logging, and coordinated drift detection.
 

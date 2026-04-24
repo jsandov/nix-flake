@@ -176,7 +176,7 @@ in
   config = {
     users.users.${cfg.adminUser.name} = {
       isNormalUser = true;
-      description = cfg.adminUser.description;
+      inherit (cfg.adminUser) description;
       extraGroups = cfg.adminUser.groups;
       openssh.authorizedKeys.keys = cfg.adminUser.authorizedKeys;
       # Key-only login. "!" is an invalid password hash that matches

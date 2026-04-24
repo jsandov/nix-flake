@@ -119,6 +119,47 @@ security.loginDefs.settings = {
 
 Note the types: integers drop the quotes, strings keep them. `SHA_CRYPT_ROUNDS` is split into `SHA_CRYPT_MIN_ROUNDS` + `SHA_CRYPT_MAX_ROUNDS`.
 
+## 17. `users.mutableUsers = false` Fails Eval Without a Wheel User Login
+
+NixOS asserts that if `users.mutableUsers = false`, at least one of the following must be true: root has a password, some wheel user has a password, or some wheel user has `openssh.authorizedKeys.keys` declared. Otherwise eval fails with `Failed assertions: - Neither the root account nor any wheel user has a password or SSH authorized key`.
+
+The assertion is correct — it prevents a classic lock-out on a real deployment. But a **skeleton flake** that sets `mutableUsers = false` from canonical but hasn't declared the admin user yet hits the assertion and can't pass CI.
+
+**Fix (skeleton):**
+
+```nix
+users.allowNoPasswordLogin = lib.mkDefault true;
+```
+
+Bypasses the assertion. Real deployments declare the admin user with SSH keys:
+
+```nix
+users.users.admin = {
+  isNormalUser = true;
+  extraGroups = [ "wheel" ];
+  openssh.authorizedKeys.keys = [ "ssh-ed25519 AAAA..." ];
+};
+users.allowNoPasswordLogin = lib.mkForce false;
+```
+
+`lib.mkDefault` on the skeleton + `lib.mkForce` in the host gives the right priority dance: skeleton passes CI; deployment enforces the assertion.
+
+## 18. `boot.tmp.useTmpfs = true` Omits `noexec`
+
+NixOS's helper `boot.tmp.useTmpfs = true` mounts `/tmp` as tmpfs with `nosuid,nodev` but NOT `noexec`. STIG wants all three. If you set the helper to true and also declare `fileSystems."/tmp"` explicitly, you get a module-system collision on the mount point.
+
+**Fix:** drop the helper, declare `fileSystems."/tmp"` directly:
+
+```nix
+fileSystems."/tmp" = {
+  device = "tmpfs";
+  fsType = "tmpfs";
+  options = [ "defaults" "size=50%" "mode=1777" "nosuid" "nodev" "noexec" ];
+};
+```
+
+Own the options list; don't rely on the helper.
+
 ## Key Takeaways
 
 - Test every Nix snippet against real NixOS 24.11+ evaluation before committing
@@ -130,3 +171,5 @@ Note the types: integers drop the quotes, strings keep them. `SHA_CRYPT_ROUNDS` 
 - When a module uses `options.*`, every config assignment must live under `config.*` — no mixing
 - Flake inputs without a rev track upstream mainline; pin to a SHA for any input that gates the build
 - Structured options beat file-override `.text`/`.source` overrides — use `security.loginDefs.settings.*`, not `environment.etc."login.defs"`
+- `users.mutableUsers = false` triggers a lock-out assertion; use `users.allowNoPasswordLogin = lib.mkDefault true` as the skeleton escape hatch
+- `boot.tmp.useTmpfs = true` omits `noexec` — declare `fileSystems."/tmp"` explicitly if you need all three hardening flags

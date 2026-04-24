@@ -9,6 +9,7 @@ System architecture for the compliance-mapped NixOS AI server.
 - [[ci-gate]] — The CI contract that catches broken Nix before it merges
 - [[prd-snippet-tiers]] — Three-tier convention for Nix snippets across PRDs, modules, and wiki
 - [[meta-module]] — Threat model, data classification, tenancy as typed NixOS options
+- [[boot-integrity]] — Secure Boot via lanzaboote; dormant/active mode gating; priority dance
 - [[nix-implementation-patterns]] — Reusable patterns for module composition and option design
 - [[data-flows]] — How data moves through the inference and agent pipelines
 - [[threat-model]] — Protected assets, adversary model, and scope boundaries

@@ -38,7 +38,9 @@ Controls per stage:
 - **Action logging:** Every tool invocation logged for audit
 - **Result delivery:** Output sanitized before return to agent context
 
-## RAG Pipeline Flow
+## RAG Ingestion and Retrieval Flow
+
+Detailed six-stage version lives in `docs/prd/prd.md` §6.3 (source → chunk → embed → index → retrieve → inference), which is the authoritative treatment with per-stage controls and cross-references. Summary here:
 
 ```
 Document Ingestion ──> Access Control (per-collection permissions)
@@ -54,6 +56,7 @@ Key points:
 - Vector store AIDE-monitored, access restricted to inference service account
 - Retrieved documents filtered by requestor's access level — see [[hipaa/ephi-data-flow]]
 - Output citations enable auditability
+- **Currently aspirational** — the project has no RAG application code yet; AI-20 will materialise the flow when the app layer exists. Lineage and governance gaps are documented in [[../shared-controls/residual-risks-register|residual-risks row 6]].
 
 ## Audit and Evidence Flow
 

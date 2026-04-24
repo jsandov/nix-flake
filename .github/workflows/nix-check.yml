@@ -100,3 +100,55 @@ jobs:
             echo "::error::Found audit rules referencing FHS paths that do not exist on NixOS — use /run/wrappers/bin or /run/current-system/sw/bin"
             exit 1
           fi
+
+      - name: Secrets-in-Nix-store leakage lint (ARCH-07)
+        # The Nix store is world-readable. A secret embedded in a Nix
+        # expression ends up in /nix/store with 0444 perms — readable
+        # by every user and process, persisted until garbage collection,
+        # and not securely wiped even then. See
+        # wiki/nixos-platform/nixos-gotchas.md #1 and
+        # wiki/shared-controls/secrets-management.md.
+        #
+        # Three heuristic patterns that cover the most common leaks:
+        #
+        # (a) PEM content embedded in a Nix builder function. A leaked
+        #     private key or certificate is almost always visible on one
+        #     line containing `-----BEGIN` together with a `writeText` or
+        #     `toFile` call.
+        #
+        # (b) Long hex runs (40+ chars) embedded in a writeText/toFile
+        #     call. Catches sha1/sha256-shaped tokens and long bearer
+        #     tokens. Legitimate hashes (nixpkgs pin SHAs, narHash, etc.)
+        #     live in `flake.lock` and input declarations, not inside
+        #     writeText bodies — so the false-positive rate in modules/
+        #     and hosts/ is acceptably low.
+        #
+        # (c) Literal-value assignment to an env var whose name signals a
+        #     secret (TOKEN, SECRET, PASSWORD, PRIVATE_KEY, API_KEY,
+        #     AUTH_KEY). Allows values that start with `$` (string
+        #     interpolation pulling from `config.sops.secrets.*.path`),
+        #     empty strings, and `null`.
+        #
+        # Scope: modules/ and hosts/ only. PRDs get illustrative snippets
+        # which can contain example secrets; that's handled by prd-snippet
+        # -tiers review. True eval-based introspection is ARCH-17's job.
+        run: |
+          set -u
+          failed=0
+
+          if grep -rnE '(pkgs\.writeText|builtins\.toFile)[^)]*-----BEGIN' modules/ hosts/ 2>/dev/null; then
+            echo "::error::PEM block embedded in pkgs.writeText / builtins.toFile — move to config.sops.secrets.<name>"
+            failed=1
+          fi
+
+          if grep -rnE '(pkgs\.writeText|builtins\.toFile)[^)]*[A-Fa-f0-9]{40}' modules/ hosts/ 2>/dev/null; then
+            echo "::error::Long hex token (40+ chars) in pkgs.writeText / builtins.toFile — move to config.sops.secrets.<name>"
+            failed=1
+          fi
+
+          if grep -rnE '(TOKEN|SECRET|PASSWORD|PRIVATE_KEY|API_KEY|AUTH_KEY)[A-Z_]*[[:space:]]*=[[:space:]]*"[^$"][^"]*"' modules/ hosts/ 2>/dev/null; then
+            echo "::error::Literal-value secret-named env var — use config.sops.secrets.<name>.path via interpolation"
+            failed=1
+          fi
+
+          exit $failed

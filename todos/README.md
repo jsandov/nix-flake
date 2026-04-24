@@ -23,17 +23,19 @@ Work is split across three tracks that can progress semi-independently once the 
 
 ## Progress
 
-_Last updated: 2026-04-24. Update on pause or major merge._
+_Last updated: 2026-04-24 (second snapshot, after P1 batch-2 compile). Update on pause or major merge._
 
 | Priority | Done | Total |
 |---|---|---|
-| P0 | **7** | 16 |
-| P1 | 0 | 25 |
+| P0 | **15** | 16 |
+| P1 | **7** | 25 |
 | P2 | 0 | 18 |
 | P3 | 0 | 9 |
-| **All** | **7** | **68** |
+| **All** | **22** | **68** |
 
-Current branch/PR cadence and design decisions preserved in `compliant-nix-config-vault/raw/session-pause-2026-04-24.md`.
+Only **AI-04** remains open among P0 — blocked on human SEV/TDX decision. Every other P0 closed. Seven P1s complete: `ARCH-07` (secret-leak lint), `ARCH-08` (meta module), `ARCH-09` (Secure Boot/lanzaboote), `ARCH-12` (RAG data flow §6.3), `ARCH-13` (residual-risks appendix), `INFRA-04` (first real module — audit-and-aide), `AI-14+15+16` (HITRUST 19-domain taxonomy).
+
+Current state + next-slice guidance in `compliant-nix-config-vault/raw/session-pause-2026-04-24-cont.md`.
 
 ## Stack-ranked P0 list (do first)
 
@@ -48,17 +50,17 @@ The P0 queue is ordered by unblocking power — earlier items unblock later ones
 | 5 | ARCH-05 | Pick and implement a secrets module (sops-nix) | M | ✓ PR #26 (+ #27 hotfix) |
 | 6 | ARCH-06 | Strip `/usr/bin`, `/sbin`, `/usr/sbin` references everywhere | S | ✓ PR #29 |
 | 7 | INFRA-03 | Remove every phantom / deprecated NixOS option flagged in MASTER-REVIEW | S | ✓ PR #30 |
-| 8 | INFRA-01 | Rewrite `lan-only-network` firewall to nftables with correct egress | M | next |
-| 9 | INFRA-02 | Bind all listeners (Ollama, app API, SSH) to loopback / LAN NIC | S | next |
-| 10 | AI-06 | Lock `OLLAMA_HOST` to loopback and harden ai-services exposure | S | |
-| 11 | AI-01 | Scope `MemoryDenyWriteExecute` to non-CUDA services only | S | |
-| 12 | AI-02 | Remove `WatchdogSec` from Ollama, replace with external health timer | S | |
-| 13 | AI-03 | Fix `ai-model-fetch` for Ollama's content-addressed blob format | M | |
-| 14 | AI-07 | Correct `OLLAMA_NOPRUNE` framing (not a security control) | S | |
-| 15 | AI-05 | Disable core dumps system-wide (prevent ePHI on disk) | S | |
+| 8 | INFRA-01 | Rewrite `lan-only-network` firewall to nftables with correct egress | M | ✓ PR #33 (batched w/ INFRA-02) |
+| 9 | INFRA-02 | Bind all listeners (Ollama, app API, SSH) to loopback / LAN NIC | S | ✓ PR #33 |
+| 10 | AI-06 | Lock `OLLAMA_HOST` to loopback and harden ai-services exposure | S | ✓ PR #36 (pre-check) |
+| 11 | AI-01 | Scope `MemoryDenyWriteExecute` to non-CUDA services only | S | ✓ PR #36 (pre-check) |
+| 12 | AI-02 | Remove `WatchdogSec` from Ollama, replace with external health timer | S | ✓ PR #36 (pre-check) |
+| 13 | AI-03 | Fix `ai-model-fetch` for Ollama's content-addressed blob format | M | ✓ PR #36 (pre-check) |
+| 14 | AI-07 | Correct `OLLAMA_NOPRUNE` framing (not a security control) | S | ✓ PR #36 (pre-check) |
+| 15 | AI-05 | Disable core dumps system-wide (prevent ePHI on disk) | S | ✓ PR #36 (pre-check) |
 | 16 | AI-04 | **DECISION:** disposition live-memory ePHI risk — SEV/TDX vs accepted risk | M | blocked on human |
 
-Totals: 6 ARCH, 3 INFRA, 7 AI = 16 P0 items. **7 of 16 complete.**
+Totals: 6 ARCH, 3 INFRA, 7 AI = 16 P0 items. **15 of 16 complete. Only AI-04 (human-gated) open.**
 
 ## P1 foundation queue
 

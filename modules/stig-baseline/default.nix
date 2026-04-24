@@ -83,6 +83,16 @@ in
       # Immutable user accounts
       users.mutableUsers = config.canonical.nixosOptions.usersMutableUsers;
 
+      # Skeleton lock-out escape hatch. `users.mutableUsers = false`
+      # triggers a NixOS assertion that requires either root password
+      # or a wheel user with SSH authorized_keys — neither is declared
+      # in the skeleton because no admin user exists yet. Setting
+      # allowNoPasswordLogin = true lets `nix eval` succeed on the
+      # skeleton; real deployments declare
+      # `users.users.admin.openssh.authorizedKeys.keys` and override
+      # this back to false with lib.mkForce in the host config.
+      users.allowNoPasswordLogin = lib.mkDefault true;
+
       # nix-daemon ACL
       nix.settings.allowed-users =
         config.canonical.nixosOptions.nixAllowedUsers;

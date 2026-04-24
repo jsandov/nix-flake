@@ -681,36 +681,33 @@ STIG requires multi-factor authentication for privileged remote access. The `pam
     umask 077
   '';
 
-  # Login definitions -- umask and password aging
-  # NOTE: NixOS manages /etc/login.defs through the shadow package. A wholesale
-  # override via environment.etc."login.defs".text can conflict with NixOS-managed
-  # fields. The recommended approach is to use NixOS options where possible
-  # (security.pam.*, users.defaultUserShell, etc.) and only override login.defs
-  # with lib.mkForce if necessary. The override below uses mkForce to ensure
-  # STIG-required values take precedence.
-  environment.etc."login.defs" = {
-    source = lib.mkForce (pkgs.writeText "login.defs" ''
-      # STIG: Default umask for user file creation
-      UMASK 077
-      # STIG: Password aging controls
-      PASS_MAX_DAYS 60
-      PASS_MIN_DAYS 1
-      PASS_MIN_LEN 15
-      PASS_WARN_AGE 7
-      # STIG: Home directory permissions
-      HOME_MODE 0700
-      # STIG: UID/GID ranges
-      UID_MIN 1000
-      UID_MAX 60000
-      SYS_UID_MIN 100
-      SYS_UID_MAX 999
-      GID_MIN 1000
-      GID_MAX 60000
-      # STIG: Encrypt passwords with SHA-512
-      ENCRYPT_METHOD SHA512
-      # STIG: Create home directories on account creation
-      CREATE_HOME yes
-    '');
+  # Login definitions -- umask and password aging.
+  # NixOS 24.11+ ships structured `security.loginDefs.settings.*` options
+  # that merge cleanly with the shadow-package-managed defaults. Prefer
+  # them over `environment.etc."login.defs"` overrides (which, even with
+  # `lib.mkForce`, conflict with NixOS PAM integration and lose fields
+  # that the shadow package sets).
+  security.loginDefs.settings = {
+    # STIG: Default umask for user file creation
+    UMASK = "077";
+    # STIG: Password aging controls
+    PASS_MAX_DAYS = 60;
+    PASS_MIN_DAYS = 1;
+    PASS_MIN_LEN = 15;
+    PASS_WARN_AGE = 7;
+    # STIG: Home directory permissions
+    HOME_MODE = "0700";
+    # STIG: UID/GID ranges
+    UID_MIN = 1000;
+    UID_MAX = 60000;
+    SYS_UID_MIN = 100;
+    SYS_UID_MAX = 999;
+    GID_MIN = 1000;
+    GID_MAX = 60000;
+    # STIG: Encrypt passwords with SHA-512
+    ENCRYPT_METHOD = "SHA512";
+    # STIG: Create home directories on account creation
+    CREATE_HOME = "yes";
   };
 
   # Restrict permissions on sensitive configuration files
